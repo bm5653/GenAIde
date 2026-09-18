@@ -18,7 +18,7 @@ import { ExitTicketView } from './components/ExitTicketView';
 import { AiHelpView } from './components/AiHelpView';
 import { NotesView } from './components/NotesView';
 import { ProgressView } from './components/ProgressView';
-import { Heart, Sparkles, BookOpen, ShieldCheck, Download, Globe } from 'lucide-react';
+import { Heart, Sparkles, BookOpen, ShieldCheck } from 'lucide-react';
 
 const STORAGE_KEY = 'genaide_user_progress_v1';
 
@@ -177,15 +177,6 @@ export default function App() {
               <button onClick={() => handleTabChange('practice')} className="hover:text-white transition-colors">Solver</button>
               <button onClick={() => handleTabChange('pitfalls')} className="hover:text-white transition-colors">Pitfalls</button>
               <button onClick={() => handleTabChange('ai-help')} className="hover:text-white transition-colors">AI Help</button>
-              <a
-                href="./genaide-tiiny-site.zip"
-                download="genaide-tiiny-site.zip"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-purple-950 font-bold text-xs shadow-xs transition-transform active:scale-95"
-                title="Download ready-to-upload ZIP package for tiiny.site"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Tiiny.site ZIP Package</span>
-              </a>
             </div>
           </div>
 
