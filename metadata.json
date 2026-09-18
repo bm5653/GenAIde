@@ -1,0 +1,8 @@
+{
+  "name": "GenAIde - Chapter 5 Population Genetics",
+  "description": "Interactive AI-Aided Population Genetics Tutor for Matriculation Biology Chapter 5.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
