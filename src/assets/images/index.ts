@@ -11,6 +11,7 @@ import hwRandomMatingImg from './hw_random_mating_1789643234135.jpg';
 import hwNoMutationImg from './hw_no_mutation_1789643246344.jpg';
 import hwNoMigrationImg from './hw_no_migration_1789643260168.jpg';
 import hwNoSelectionImg from './hw_no_selection_1789643274216.jpg';
+import genaideHeaderImg from './genaide-header.png';
 
 export { 
   platycladusImg, 
@@ -23,5 +24,6 @@ export {
   hwRandomMatingImg,
   hwNoMutationImg,
   hwNoMigrationImg,
-  hwNoSelectionImg
+  hwNoSelectionImg,
+  genaideHeaderImg
 };
