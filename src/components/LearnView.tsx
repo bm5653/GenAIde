@@ -427,7 +427,7 @@ export const LearnView: React.FC = () => {
               </div>
             </div>
 
-            {/* Calculated Results Box with Tick Symbols */}
+            {/* Calculated Results Box */}
             <div className="p-5 bg-purple-950 text-white rounded-2xl space-y-3 text-xs sm:text-sm border border-purple-800 shadow-md">
               <div className="flex items-center justify-between border-b border-purple-800 pb-2">
                 <div className="font-bold text-amber-300 flex items-center gap-1.5">
@@ -779,7 +779,7 @@ export const LearnView: React.FC = () => {
               </div>
             </div>
 
-            {/* Calculated Results Box with Tick Symbols */}
+            {/* Calculated Results Box */}
             <div className="p-5 bg-purple-950 text-white rounded-2xl space-y-3 text-xs sm:text-sm border border-purple-800 shadow-md">
               <div className="flex items-center justify-between border-b border-purple-800 pb-2">
                 <div className="font-bold text-rose-300 flex items-center gap-1.5">

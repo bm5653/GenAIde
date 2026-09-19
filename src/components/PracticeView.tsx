@@ -62,6 +62,7 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
     activeHintLevel: number;
     isBareAnswerWarning?: boolean;
     tickAwarded?: boolean;
+    showIncorrectBanner?: boolean;
   }>>({});
   const [isQuestionFinished, setIsQuestionFinished] = useState(false);
   const [showFullMarkScheme, setShowFullMarkScheme] = useState(false);
@@ -449,66 +450,61 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
           feedbackText: `⚠️ Working Step with Description Required: You are NOT allowed to give only the final bare answer ("${rawVal}"). In Matriculation Biology examination standard, all symbols must be written with their description first in the calculation (e.g. "${example}").`,
           showExplanation: currentAttempt >= 3,
           attempts: currentAttempt,
-          activeHintLevel: prev[step.stepNumber]?.activeHintLevel || 0
+          activeHintLevel: prev[step.stepNumber]?.activeHintLevel || 0,
+          showIncorrectBanner: false
         }
       }));
       return;
     }
 
-    // Extract student's candidate answer from their step-by-step calculation
-    let userNum = NaN;
-    if (isNumericStep) {
-      if (rawVal.includes('=')) {
-        const parts = rawVal.split('=');
-        const lastPart = parts[parts.length - 1].trim();
-        const cleanedLast = lastPart.replace(/[^\d.-]/g, '');
-        userNum = parseFloat(cleanedLast);
-        if (isNaN(userNum)) {
-          const matches = rawVal.match(/[-+]?[0-9]*\.?[0-9]+/g);
-          if (matches && matches.length > 0) {
-            userNum = parseFloat(matches[matches.length - 1]);
-          }
-        }
-      } else {
-        const matches = rawVal.match(/[-+]?[0-9]*\.?[0-9]+/g);
-        if (matches && matches.length > 0) {
-          userNum = parseFloat(matches[matches.length - 1]);
-        }
-      }
+    // Extract student's candidate answer value from their step-by-step calculation
+    let candidate = rawVal.trim();
+    if (rawVal.includes('=')) {
+      const parts = rawVal.split('=');
+      candidate = parts[parts.length - 1].trim();
     }
+    // Clean candidate from trailing punctuation like '.' or ';'
+    candidate = candidate.replace(/[.;]+$/, '').trim();
+    const cleanCandidate = candidate.toLowerCase();
+    const cleanRaw = rawVal.toLowerCase().trim();
 
-    // Check exact text matching in accepted answers
+    // Helper to count decimal places in a string
+    const countDecimals = (str: string): number => {
+      const match = str.match(/\.(\d+)/);
+      return match ? match[1].length : 0;
+    };
+
+    // Strict equality check against the official mark scheme:
+    // Every answer typed in must be exactly the same as in the answer scheme.
     const exactMatch = step.acceptedAnswers.some(ans => {
-      const a = ans.toLowerCase().trim();
-      const r = rawVal.toLowerCase().trim();
-      return r === a || r.replace(/\s+/g, '') === a.replace(/\s+/g, '') || r.includes(a);
+      const a = ans.trim().toLowerCase();
+      const c = cleanCandidate;
+      const r = cleanRaw;
+
+      // Direct exact match of candidate or entire string
+      if (c === a || r === a) return true;
+      // Exact match without whitespace (e.g. "900 insects" vs "900insects", "4,050" vs "4050")
+      if (c.replace(/[\s,]+/g, '') === a.replace(/[\s,]+/g, '')) return true;
+      // Allow percentage symbol or number if accepted answer includes %
+      if (a.endsWith('%') && (c === a || c + '%' === a || c === a.replace('%', ''))) return true;
+      // Conceptual text match: if key phrase is included in full student response
+      if (!isNumericStep && (r.includes(a) || r.replace(/\s+/g, '').includes(a.replace(/\s+/g, '')))) return true;
+      return false;
     });
 
-    let isCorrect = exactMatch;
-
-    if (!isCorrect && !isNaN(userNum)) {
-      // Check numerical tolerance if defined
-      const numericTarget = parseFloat(step.acceptedAnswers[0]);
-      if (!isNaN(numericTarget)) {
-        const tol = step.tolerance ?? 0.01;
-        if (Math.abs(userNum - numericTarget) <= tol) {
-          isCorrect = true;
-        }
-      }
-    }
-
-    if (isCorrect) {
-      // Correct step calculation! A tick symbol is given for the correct step.
+    if (exactMatch) {
+      // Correct step calculation verified against the official answer scheme!
       setStepFeedback(prev => ({
         ...prev,
         [step.stepNumber]: {
           isCorrect: true,
           isBareAnswerWarning: false,
           tickAwarded: true,
-          feedbackText: `✓ Correct Step! Step-by-step calculation verified. ${step.explanation}`,
+          feedbackText: `✓ Correct Step! Well done! [${step.marks || 1} ${step.marks === 1 ? 'mark' : 'marks'}]`,
           showExplanation: true,
           attempts: currentAttempt,
-          activeHintLevel: prev[step.stepNumber]?.activeHintLevel || 0
+          activeHintLevel: prev[step.stepNumber]?.activeHintLevel || 0,
+          showIncorrectBanner: false
         }
       }));
 
@@ -528,37 +524,19 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
         setCurrentStepIndex(prev => prev + 1);
       }
     } else {
-      // Intelligent Error Diagnosis
-      let diagnosis = "Calculation or working incorrect. Check your steps.";
-      
-      // Pitfall 1: Did they square instead of square root?
-      const numericTarget = parseFloat(step.acceptedAnswers[0]);
-      if (!isNaN(numericTarget) && !isNaN(userNum)) {
-        if (Math.abs(userNum - (numericTarget * numericTarget)) < 0.05) {
-          diagnosis = "PITFALL DETECTED: You squared the number instead of taking the square root (√)!";
-        } else if (Math.abs((userNum * userNum) - numericTarget) < 0.05) {
-          diagnosis = "PITFALL DETECTED: You need to take the square root (√) of this genotype frequency!";
-        } else if (Math.abs(userNum - (1 - numericTarget)) < 0.05) {
-          diagnosis = "PITFALL DETECTED: You calculated (1 - value). Check if you need to take the square root first!";
-        } else if (Math.abs(userNum * 2 - numericTarget) < 0.05 || Math.abs(userNum / 2 - numericTarget) < 0.05) {
-          diagnosis = "PITFALL DETECTED: Factor of 2 missing or doubled! Did you forget the 2 in 2pq?";
-        } else if (userNum > 1 && numericTarget <= 1) {
-          diagnosis = "PITFALL DETECTED: You entered a count or percentage instead of an allele/genotype frequency (between 0 and 1)!";
-        } else if (userNum <= 1 && numericTarget > 1) {
-          diagnosis = "PITFALL DETECTED: The question asks for the NUMBER OF INDIVIDUALS, not just the frequency. Remember to multiply by N!";
-        }
-      }
-
+      // Answer does NOT match the answer scheme.
+      // Do NOT reveal the official answer. Only mention "✗ Incorrect! Please check your answers/steps."
       setStepFeedback(prev => ({
         ...prev,
         [step.stepNumber]: {
           isCorrect: false,
           isBareAnswerWarning: false,
           tickAwarded: false,
-          feedbackText: `✗ ${diagnosis}`,
-          showExplanation: currentAttempt >= 3,
+          feedbackText: "✗ Incorrect! Please check your answers/steps.",
+          showExplanation: false,
           attempts: currentAttempt,
-          activeHintLevel: prev[step.stepNumber]?.activeHintLevel || (currentAttempt >= 2 ? 1 : 0)
+          activeHintLevel: prev[step.stepNumber]?.activeHintLevel || 0,
+          showIncorrectBanner: true
         }
       }));
     }
@@ -571,12 +549,18 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
         feedbackText: '',
         showExplanation: false,
         attempts: 0,
-        activeHintLevel: 0
+        activeHintLevel: 0,
+        showIncorrectBanner: false
       };
       return {
         ...prev,
         [stepNumber]: {
           ...cur,
+          // When students click on hint, do NOT let the incorrect description pop up.
+          // Only provide guidance when students click on hint.
+          showIncorrectBanner: false,
+          feedbackText: cur.isCorrect ? cur.feedbackText : '',
+          isBareAnswerWarning: false,
           activeHintLevel: Math.min(3, cur.activeHintLevel + 1)
         }
       };
@@ -847,7 +831,7 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
               </div>
             </div>
 
-            {/* Stepper Status Indicators with Tick Symbols */}
+            {/* Stepper Status Indicators */}
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               {currentQuestion.steps.map((s, sIdx) => {
                 const isPassed = stepFeedback[s.stepNumber]?.isCorrect;
@@ -976,8 +960,8 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
                               <Check className="w-4 h-4 text-emerald-700 stroke-[3]" />
                               <span>Verified Step Calculation (Description + Working):</span>
                             </span>
-                            <span className="px-2 py-0.5 bg-emerald-700 text-white text-[11px] font-extrabold rounded-md flex items-center gap-1">
-                              <span>✓ Step Awarded</span>
+                            <span className="px-2.5 py-0.5 bg-emerald-700 text-white text-[11px] font-extrabold rounded-md flex items-center gap-1">
+                              <span>✓ [{step.marks} {step.marks === 1 ? 'mark' : 'marks'}]</span>
                             </span>
                           </div>
                           <div className="font-mono font-bold text-emerald-950 text-sm bg-white/90 p-2.5 rounded-lg border border-emerald-300 leading-relaxed">
@@ -994,14 +978,30 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
                               onChange={(e) => {
                                 const val = e.target.value;
                                 setUserInputs(prev => ({ ...prev, [step.stepNumber]: val }));
+                                if (fb?.showIncorrectBanner) {
+                                  setStepFeedback(prevFeedback => ({
+                                    ...prevFeedback,
+                                    [step.stepNumber]: { ...prevFeedback[step.stepNumber], showIncorrectBanner: false }
+                                  }));
+                                }
                               }}
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') checkStep(step);
                               }}
                               placeholder={`Format e.g. ${getExampleStepText(step)}`}
-                              className="flex-1 px-3.5 py-2.5 rounded-xl border border-purple-300 font-mono text-xs sm:text-sm focus:ring-2 focus:ring-purple-500 focus:outline-hidden bg-white text-purple-950 shadow-2xs"
+                              className={`flex-1 px-3.5 py-2.5 rounded-xl border font-mono text-xs sm:text-sm focus:ring-2 focus:outline-hidden shadow-2xs transition-colors ${
+                                fb?.showIncorrectBanner && !fb.isCorrect && !fb.isBareAnswerWarning
+                                  ? 'border-red-500 ring-2 ring-red-200 bg-red-50/50 text-red-950 focus:ring-red-500'
+                                  : 'border-purple-300 bg-white text-purple-950 focus:ring-purple-500'
+                              }`}
                             />
-                            <div className="flex gap-2">
+                            <div className="flex items-center gap-2">
+                              {fb?.showIncorrectBanner && !fb.isCorrect && !fb.isBareAnswerWarning && (
+                                <span className="px-2.5 py-1 bg-red-600 text-white font-extrabold text-xs rounded-lg flex items-center gap-1 shrink-0 shadow-2xs">
+                                  <span>✗</span>
+                                  <span className="hidden sm:inline">Incorrect</span>
+                                </span>
+                              )}
                               <button
                                 onClick={() => checkStep(step)}
                                 className="px-4 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs shadow-xs active:scale-95 whitespace-nowrap flex items-center gap-1.5"
@@ -1045,20 +1045,20 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
                       </div>
                     )}
 
-                    {/* Progressive Hint Drawer */}
+                    {/* Progressive Hint Drawer - Guidance Only */}
                     {(fb?.activeHintLevel || 0) > 0 && !isStepPassed && (
-                      <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl space-y-1 text-xs text-amber-950">
-                        <div className="font-bold text-amber-900 flex items-center gap-1">
-                          <Lightbulb className="w-3.5 h-3.5 text-amber-600" />
-                          <span>Progressive Hint Level {fb?.activeHintLevel}:</span>
+                      <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl space-y-1.5 text-xs text-amber-950 animate-in fade-in duration-150 shadow-2xs">
+                        <div className="font-bold text-amber-900 flex items-center gap-1.5">
+                          <Lightbulb className="w-4 h-4 text-amber-600" />
+                          <span>Step Guidance (Hint Level {fb?.activeHintLevel} of 3):</span>
                         </div>
-                        {fb?.activeHintLevel >= 1 && <div>• <strong>Level 1 (Concept):</strong> {step.hint1}</div>}
-                        {fb?.activeHintLevel >= 2 && <div>• <strong>Level 2 (Formula):</strong> {step.hint2}</div>}
-                        {fb?.activeHintLevel >= 3 && <div>• <strong>Level 3 (Working):</strong> {step.hint3}</div>}
+                        {fb?.activeHintLevel >= 1 && <div>• <strong>Level 1 (Concept Guidance):</strong> {step.hint1}</div>}
+                        {fb?.activeHintLevel >= 2 && <div>• <strong>Level 2 (Formula Guidance):</strong> {step.hint2}</div>}
+                        {fb?.activeHintLevel >= 3 && <div>• <strong>Level 3 (Working Guidance):</strong> {step.hint3}</div>}
                       </div>
                     )}
 
-                    {/* Step Feedback Banner: Prominent Tick Symbol for Correct Step */}
+                    {/* Step Feedback Banner: Correct Step with allocated mark */}
                     {fb?.isCorrect && (
                       <div className="p-3.5 rounded-xl bg-emerald-100 border-2 border-emerald-400 text-emerald-950 space-y-1.5 animate-in zoom-in-95 duration-200 shadow-2xs">
                         <div className="flex items-center gap-2">
@@ -1066,26 +1066,26 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
                             ✓
                           </div>
                           <span className="font-black text-emerald-950 text-sm">
-                            ✓ Correct Step! Tick Symbol Awarded (+{step.marks} {step.marks === 1 ? 'Mark' : 'Marks'})
+                            ✓ Correct Step! Well done! [{step.marks} {step.marks === 1 ? 'mark' : 'marks'}]
                           </span>
                         </div>
-                        <div className="text-xs text-emerald-900 pl-8 leading-relaxed">
-                          <strong>Official Scheme:</strong> {step.explanation}
+                        <div className="text-xs text-emerald-900 pl-8 leading-relaxed font-medium">
+                          <strong>Official Mark Scheme:</strong> {step.explanation}
                         </div>
                       </div>
                     )}
 
-                    {/* Incorrect Feedback (Not Bare Answer) */}
-                    {fb && !fb.isCorrect && !fb.isBareAnswerWarning && (
-                      <div className="p-3 rounded-xl text-xs bg-red-100 border-2 border-red-300 text-red-950">
-                        {fb.feedbackText}
-                      </div>
-                    )}
-
-                    {/* Explanation after 3 attempts if still stuck */}
-                    {fb?.showExplanation && !isStepPassed && (
-                      <div className="p-3 bg-purple-100/60 border border-purple-200 rounded-xl text-xs text-purple-900">
-                        <strong>Official Mark Scheme Rationale:</strong> {step.explanation}
+                    {/* Incorrect Feedback with Wrong Symbol (✗) - Never reveals the official answer */}
+                    {fb?.showIncorrectBanner && !fb.isCorrect && !fb.isBareAnswerWarning && (
+                      <div className="p-3.5 rounded-xl bg-red-100 border-2 border-red-400 text-red-950 animate-in zoom-in-95 duration-200 shadow-2xs">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
+                            ✗
+                          </div>
+                          <span className="font-black text-red-950 text-sm">
+                            ✗ Incorrect! Please check your answers/steps.
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>

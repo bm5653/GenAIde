@@ -81,7 +81,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               className="px-5 py-2.5 rounded-xl bg-purple-900/90 hover:bg-purple-800 text-purple-100 font-semibold text-sm border border-purple-600 transition-all flex items-center gap-2 active:scale-95"
             >
               <GraduationCap className="w-4 h-4 text-purple-300" />
-              PAST YEAR QUESTIONS
+              TUTORIAL & PAST YEAR PSPM
             </button>
             <button
               onClick={() => onNavigate('exit-ticket')}

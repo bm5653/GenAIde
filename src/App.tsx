@@ -126,7 +126,10 @@ export default function App() {
         )}
 
         {activeTab === 'past-year' && (
-          <PastYearView onLoadQuestionIntoSolver={handleNavigateToQuestion} />
+          <PastYearView
+            onLoadQuestionIntoSolver={handleNavigateToQuestion}
+            completedQuestions={userProgress.completedQuestions}
+          />
         )}
 
         {activeTab === 'new-population' && (

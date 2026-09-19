@@ -54,7 +54,7 @@ export const AiHelpView: React.FC = () => {
     {
       id: 'welcome',
       sender: 'bot',
-      text: "Hello! I am GenAIde, your AI-aided Population Genetics tutor. 🧬\n\nRemember our core motto: **\"Think First. Calculate Second. Use AI Wisely.\"**\n\n📸 **New:** You can now **upload a photo or screenshot of your handwritten calculation steps**! I will inspect your working step-by-step, award a **tick symbol (✓)** for each correct step, and pinpoint any conceptual or arithmetic slips without spoiling the answer.",
+      text: "Hello! I am GenAIde, your AI-aided Population Genetics tutor. 🧬\n\nRemember our core motto: **\"Think First. Calculate Second. Use AI Wisely.\"**\n\n📸 **New:** You can now **upload a photo or screenshot of your handwritten calculation steps**! I will inspect your working step-by-step, verify each correct step with allocated marks, and pinpoint any conceptual or arithmetic slips without spoiling the answer.",
       time: 'Just now'
     }
   ]);
@@ -269,7 +269,7 @@ Remember: Always start by identifying the homozygous recessive phenotype ($q^2$)
         const botReply: ChatMessage = {
           id: `bot-${Date.now()}`,
           sender: 'bot',
-          text: `I have thoroughly inspected your handwritten working steps for **${evaluation.questionNumber}** (${evaluation.questionTitle}).\n\nHere is your **Step-by-Step Diagnostic Evaluation**: A tick symbol (✓) is awarded for each correct step below!`,
+          text: `I have thoroughly inspected your handwritten working steps for **${evaluation.questionNumber}** (${evaluation.questionTitle}).\n\nHere is your **Step-by-Step Diagnostic Evaluation**: Correct steps and allocated marks are detailed below!`,
           time: 'Just now',
           stepEvaluation: evaluation
         };
@@ -319,7 +319,7 @@ Remember: Always start by identifying the homozygous recessive phenotype ($q^2$)
           GenAIde AI Help Desk
         </h2>
         <p className="text-xs sm:text-sm text-purple-800">
-          Ask questions, or <strong>upload photos of your handwritten working steps</strong>. GenAIde verifies your calculations step-by-step, awards <strong>tick symbols (✓)</strong> for correct steps, and guides you socratically through mistakes.
+          Ask questions, or <strong>upload photos of your handwritten working steps</strong>. GenAIde verifies your calculations step-by-step with allocated marks, and guides you socratically through mistakes.
         </p>
       </div>
 
@@ -757,7 +757,7 @@ Remember: Always start by identifying the homozygous recessive phenotype ($q^2$)
               <span>Submit Working Image</span>
             </div>
             <p className="text-xs text-purple-800 leading-relaxed">
-              Snap a photo of your notebook or test paper. AI will analyze each step and award <strong>tick symbols (✓)</strong>!
+              Snap a photo of your notebook or test paper. AI will analyze each step and verify allocated marks!
             </p>
             
             <div 

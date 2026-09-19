@@ -69,7 +69,7 @@ export const QUESTIONS_DATA: QuestionData[] = [
         instruction: "Calculate the frequency of the recessive allele (q) in 2005 (to 4 decimal places).",
         expectedConcept: "Frequency of recessive allele in 2005, q = √q²",
         expectedSymbol: "q",
-        acceptedAnswers: ["0.0400", "0.04", ".0400", ".04"],
+        acceptedAnswers: ["0.0400", ".0400"],
         tolerance: 0.0001,
         hint1: "Take the square root of 0.0016.",
         hint2: "q = √0.0016",

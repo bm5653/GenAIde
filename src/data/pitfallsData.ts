@@ -1,4 +1,4 @@
-import { PitfallItem } from '../types';
+import { PitfallItem, PitfallPracticeQuestion } from '../types';
 
 export const PITFALLS_DATA: PitfallItem[] = [
   {

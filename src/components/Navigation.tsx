@@ -36,7 +36,7 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
     { id: 'learn', label: 'Learn Chapter 5', icon: BookOpen },
     { id: 'toolbox', label: 'PopGen Toolbox', icon: TableProperties },
     { id: 'practice', label: 'Step Solver', icon: PenTool },
-    { id: 'past-year', label: 'Past Year & Q&A', icon: GraduationCap },
+    { id: 'past-year', label: 'Tutorial and Past Year PSPM Questions', icon: GraduationCap },
     { id: 'new-population', label: 'New Population', icon: Users, badge: 'High Impact' },
     { id: 'pitfalls', label: 'PopGen Pitfalls', icon: AlertTriangle },
     { id: 'exit-ticket', label: 'Exit Ticket', icon: Target, badge: 'Game' },

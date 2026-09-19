@@ -80,15 +80,19 @@ export interface FlashcardItem {
 }
 
 export interface UserProgress {
-  questionsAttempted: string[];
-  questionsCompleted: string[];
-  totalStepsCompleted: number;
-  totalHintsUsed: number;
-  mistakesCount: { [mistakeType: string]: number };
-  exitTicketBestScore: number;
-  exitTicketCompleted: boolean;
-  flashcardsReviewed: number;
-  earnedBadges: string[];
+  completedQuestions: string[];
+  totalScore: number;
+  attemptsByQuestion: Record<string, number>;
+  masteredPitfalls?: number[];
+  questionsAttempted?: string[];
+  questionsCompleted?: string[];
+  totalStepsCompleted?: number;
+  totalHintsUsed?: number;
+  mistakesCount?: { [mistakeType: string]: number };
+  exitTicketBestScore?: number;
+  exitTicketCompleted?: boolean;
+  flashcardsReviewed?: number;
+  earnedBadges?: string[];
 }
 
 export interface PitfallItem {
@@ -104,4 +108,24 @@ export interface PitfallItem {
     question: string;
     options: { text: string; isCorrect: boolean; feedback: string }[];
   };
+}
+
+export interface PitfallPracticeQuestion {
+  id: number;
+  title: string;
+  scenario: string;
+  questionText: string;
+  trapsCovered: { id: number; name: string }[];
+  options: {
+    text: string;
+    isCorrect: boolean;
+    trapName?: string;
+    feedback: string;
+  }[];
+  modelWorking: {
+    stepTitle: string;
+    working: string;
+    marks: number;
+  }[];
+  examinerTips: string[];
 }
