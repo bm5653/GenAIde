@@ -9,6 +9,13 @@
     <meta property="og:description" content="Interactive AI-Aided Population Genetics Tutor for Matriculation Biology Chapter 5." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      try {
+        localStorage.removeItem('genaide_theme_mode');
+        document.documentElement.classList.remove('dark');
+        document.documentElement.removeAttribute('data-theme');
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

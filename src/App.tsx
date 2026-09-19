@@ -98,7 +98,10 @@ export default function App() {
       <Header onNavigateHome={() => handleTabChange('home')} />
 
       {/* Primary Sticky Navigation Bar */}
-      <Navigation activeTab={activeTab} onTabChange={handleTabChange} />
+      <Navigation
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+      />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-6">
