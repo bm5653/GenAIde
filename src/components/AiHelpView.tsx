@@ -19,7 +19,15 @@ import {
   FileText,
   ChevronRight,
   HelpCircle,
-  Award
+  Award,
+  BookOpen,
+  HelpCircle as QuestionIcon,
+  Layers,
+  ArrowRight,
+  ShieldCheck,
+  Compass,
+  Zap,
+  Info
 } from 'lucide-react';
 import { 
   analyzeUploadedWorkingImage, 
@@ -27,6 +35,21 @@ import {
   StepEvaluationResult,
   SampleWorking
 } from '../utils/popgenImageAnalyzer';
+import { 
+  TutorMode, 
+  ExplanationStyle, 
+  TutoringContext, 
+  StructuredSocraticResponse,
+  isQueryOutOfScope,
+  getScopeRedirectionMessage,
+  WHY_EXPLANATIONS,
+  getDifferentExplanation,
+  checkStudentAnswer,
+  getProgressiveHint,
+  getCompleteSolutionResponse,
+  generateQuestionFirstGuidance
+} from '../utils/popgenTutorEngine';
+import { CameraCaptureModal } from './CameraCaptureModal';
 import { QUESTIONS_DATA } from '../data/questionsData';
 import { ADDITIONAL_QUESTIONS } from '../data/pastYearAdditionalQuestions';
 
@@ -37,16 +60,17 @@ interface ChatMessage {
   time: string;
   imageUrl?: string;
   imageName?: string;
+  structuredResponse?: StructuredSocraticResponse;
   stepEvaluation?: StepEvaluationResult;
 }
 
 const PRESET_QUERIES = [
-  "How do I know whether to use Hardy-Weinberg or Gene Pool Counting?",
+  "Given that 16% of a population shows recessive phenotype, calculate dominant allele frequency.",
   "Why can't I start calculation with the dominant trait?",
-  "What do I do when individuals are removed or added to the population?",
-  "How do I convert between allele frequency and genotype frequency?",
-  "Explain why 2pq has a 2 in front of it.",
-  "What are the official decimal place rules for Matriculation Biology?"
+  "How do I calculate new allele frequencies when hamsters are removed?",
+  "Why is the heterozygous frequency 2pq?",
+  "What are the 5 conditions for Hardy-Weinberg equilibrium?",
+  "Does genetic drift always change allele frequency in small populations?"
 ];
 
 export const AiHelpView: React.FC = () => {
@@ -54,17 +78,36 @@ export const AiHelpView: React.FC = () => {
     {
       id: 'welcome',
       sender: 'bot',
-      text: "Hello! I am GenAIde, your AI-aided Population Genetics tutor. 🧬\n\nRemember our core motto: **\"Think First. Calculate Second. Use AI Wisely.\"**\n\n📸 **New:** You can now **upload a photo or screenshot of your handwritten calculation steps**! I will inspect your working step-by-step, verify each correct step with allocated marks, and pinpoint any conceptual or arithmetic slips without spoiling the answer.",
+      text: `👋 **POPGEN AI HELP DESK**
+**Your Population Genetics Study Companion**
+
+> Stuck on a question?
+> Take a photo, upload your work, or type your question.
+> I will guide you step-by-step — not just give you the answer!
+
+🧬 **Chapter 5 Focus:** Allele Frequencies ($p, q$), Genotype Frequencies ($p^2, 2pq, q^2$), Hardy-Weinberg Equilibrium, and Gene Pool Allele Counting ($2 \\times N$).
+
+Remember our core motto: **"Think First. Calculate Second. Use AI Wisely."**`,
       time: 'Just now'
     }
   ]);
   const [inputVal, setInputVal] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [activeMode, setActiveMode] = useState<TutorMode>('homework');
   const [stagedImage, setStagedImage] = useState<{ dataUrl: string; name: string; size: string } | null>(null);
   const [selectedQuestionTag, setSelectedQuestionTag] = useState<string>('Auto-detect');
   const [showSampleSelector, setShowSampleSelector] = useState(false);
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [showWhyModal, setShowWhyModal] = useState(false);
   const [previewModalImage, setPreviewModalImage] = useState<{ url: string; title: string } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [activeWhyKey, setActiveWhyKey] = useState<string>('two-pq');
+  
+  // Tutoring Session Memory
+  const [tutorContext, setTutorContext] = useState<TutoringContext>({
+    currentHintLevel: 0,
+    studentAttempts: []
+  });
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -106,7 +149,7 @@ export const AiHelpView: React.FC = () => {
       const sizeKb = Math.round(file.size / 1024);
       setStagedImage({
         dataUrl,
-        name: file.name || 'handwritten_steps.jpg',
+        name: file.name || 'question_working.jpg',
         size: `${sizeKb} KB`
       });
       setShowSampleSelector(false);
@@ -140,112 +183,25 @@ export const AiHelpView: React.FC = () => {
     setShowSampleSelector(false);
   };
 
-  const generateSocraticResponse = (query: string): string => {
-    const q = query.toLowerCase();
-
-    if ((q.includes("hardy-weinberg") && q.includes("gene pool")) || q.includes("know whether") || q.includes("difference")) {
-      return `Great question! Here is how to distinguish them in exam questions:
-
-1. **Standard Hardy-Weinberg:** Look for phrases like *"assuming the population is in genetic equilibrium"* or standard random-mating baseline data with only recessive and dominant phenotypes. Use $q^2 \\to q \\to p \\to 2pq$.
-
-2. **Gene Pool Allele Counting:** Use this when:
-   - The question gives you exact genotype breakdown directly (e.g. 70 TT, 20 Tt, 10 tt).
-   - An event broke equilibrium: individuals died, were culled, or migrated into the population!
-   - Total alleles = $2 \\times N$.
-   - **Crucial Rule:** Do NOT use $p$ or $q$ symbols when calculating non-H-W gene pool frequencies! Write full words like *"Frequency of dominant allele"*.
-
-What kind of data does your specific question provide?`;
-    }
-
-    if (q.includes("dominant") && (q.includes("start") || q.includes("can't") || q.includes("why"))) {
-      return `A vital rule in Population Genetics! 🎯
-
-**Why you CANNOT start with the dominant phenotype:**
-Individuals showing the dominant trait are actually a mixture of TWO distinct genotypes:
-- Homozygous dominant ($p^2$)
-- Heterozygous ($2pq$)
-
-If 840 out of 1000 sheep are white (dominant), $840/1000 = 0.84$ equals $(p^2 + 2pq)$, **NOT $p^2$**! You cannot take the square root of 0.84 to get $p$.
-
-**The Golden Strategy:**
-Always look for the **recessive trait** first ($q^2$). Recessive individuals can ONLY have one genotype: homozygous recessive ($aa$).
-Once you have $q^2$, you take $q = \\sqrt{q^2}$, then simply find $p = 1 - q$.
-
-Does that make the recessive-first priority clear?`;
-    }
-
-    if (q.includes("removed") || q.includes("added") || q.includes("killed") || q.includes("migrat")) {
-      return `This is the famous **"New Population"** scenario that catches many students off guard!
-
-Whenever individuals are killed, culled, or migrate in, **Hardy-Weinberg equilibrium is broken**. Here is the 5-step master protocol:
-
-1. **New Population Size:** Calculate $N_{new} = N_{original} \\pm \\text{Individuals changed}$.
-2. **Surviving / New Genotypes:** Determine how many homozygous dominant, heterozygous, and homozygous recessive individuals remain.
-3. **New Gene Pool Size:** Multiply new population by 2 ($2 \\times N_{new}$).
-4. **Count Alleles:**
-   - Dominant alleles = $(2 \\times \\text{Homozygous Dominant}) + (1 \\times \\text{Heterozygous})$
-   - Recessive alleles = $(2 \\times \\text{Homozygous Recessive}) + (1 \\times \\text{Heterozygous})$
-5. **New Frequencies:** Divide each count by the new gene pool size.
-
-Notice: Write out full verbal terms (*Frequency of dominant allele*), avoiding bare $p$ and $q$ symbols!
-
-Would you like to try this on a specific question?`;
-    }
-
-    if (q.includes("2pq") && (q.includes("2") || q.includes("why") || q.includes("front"))) {
-      return `Ah, the factor of 2! 🧬
-
-Remember that in a diploid population with random fertilization:
-- A heterozygous individual can inherit allele **A** from the mother and allele **a** from the father (probability = $p \\times q$).
-- OR they can inherit allele **a** from the mother and allele **A** from the father (probability = $q \\times p$).
-
-Both combinations ($Aa$ and $aA$) result in a heterozygous individual!
-Adding them together:
-$(p \\times q) + (q \\times p) = 2pq$.
-
-That is why you must **never forget to multiply by 2** when calculating heterozygous frequency!`;
-    }
-
-    if (q.includes("step 3") || q.includes("fix step")) {
-      return `Let's focus directly on **Step 3**!
-
-1. If you're solving a **Standard Hardy-Weinberg** problem, Step 3 is typically finding $p = 1 - q$. Make sure you use the unrounded value of $q$ to avoid drift in your subsequent calculation of $2pq$.
-2. If this is a **New Population** problem (migration or culling), remember: do **NOT** take the square root of surviving individuals! Calculate the total number of surviving alleles by multiplying the surviving population by 2 ($2 \\times N_{new}$).
-
-What specific numbers do you currently have written down for Step 3?`;
-    }
-
-    if (q.includes("decimal") || q.includes("rounding") || q.includes("place")) {
-      return `Here are the official Matriculation standard rules for decimal places:
-
-1. **If the question specifies:** Always follow the exact instruction (e.g. *"All calculation must be in 4 decimal places"*).
-2. **If NOT specified, follow population size N:**
-   - Population **10 – 99**: **1 decimal place** (e.g. 0.8)
-   - Population **100 – 999** (and percentages): **2 decimal places** (e.g. 0.37 or 14.00%)
-   - Population **1000 and above**: **3 decimal places** (e.g. 0.087)
-
-Keep unrounded figures in your calculator during intermediate steps, and round your final reported answers according to this rule!`;
-    }
-
-    return `Let's work through that together! 💡
-
-To give you the best guidance:
-1. What is the organism and trait in your problem?
-2. Which phenotype is dominant, and which is recessive?
-3. What numbers or percentages are given?
-
-Remember: Always start by identifying the homozygous recessive phenotype ($q^2$)! You can also upload a photo of your working steps anytime.`;
+  const handleCameraCapture = (dataUrl: string, fileName: string) => {
+    setStagedImage({
+      dataUrl,
+      name: fileName,
+      size: '120 KB'
+    });
   };
 
-  const handleSend = (text?: string) => {
-    const msgText = (text || inputVal).trim();
+  // Main Socratic Response Dispatcher
+  const handleSend = (textToSend?: string, overrideMode?: TutorMode) => {
+    const msgText = (textToSend !== undefined ? textToSend : inputVal).trim();
     if (!msgText && !stagedImage) return;
 
+    const currentMode = overrideMode || activeMode;
     const userMessageId = `user-${Date.now()}`;
     const userMsg: ChatMessage = {
       id: userMessageId,
       sender: 'user',
-      text: msgText || (stagedImage ? `Please check my uploaded working steps for ${selectedQuestionTag !== 'Auto-detect' ? selectedQuestionTag : 'this question'}.` : ''),
+      text: msgText || (stagedImage ? `Please analyze my uploaded question or handwritten working.` : ''),
       time: 'Just now',
       imageUrl: stagedImage?.dataUrl,
       imageName: stagedImage?.name
@@ -254,45 +210,208 @@ Remember: Always start by identifying the homozygous recessive phenotype ($q^2$)
     setMessages(prev => [...prev, userMsg]);
     const imageToAnalyze = stagedImage;
     setStagedImage(null);
-    if (!text) setInputVal('');
+    if (textToSend === undefined) setInputVal('');
     setIsTyping(true);
 
-    if (imageToAnalyze) {
-      // Analyze the uploaded image using the PopGen Step-by-Step Diagnostic Engine
-      setTimeout(() => {
-        const evaluation = analyzeUploadedWorkingImage(
-          imageToAnalyze.name,
-          msgText,
-          selectedQuestionTag !== 'Auto-detect' ? selectedQuestionTag : undefined
-        );
+    // Record student attempt in context
+    if (msgText) {
+      setTutorContext(prev => ({
+        ...prev,
+        studentAttempts: [...prev.studentAttempts, msgText]
+      }));
+    }
 
-        const botReply: ChatMessage = {
-          id: `bot-${Date.now()}`,
-          sender: 'bot',
-          text: `I have thoroughly inspected your handwritten working steps for **${evaluation.questionNumber}** (${evaluation.questionTitle}).\n\nHere is your **Step-by-Step Diagnostic Evaluation**: Correct steps and allocated marks are detailed below!`,
-          time: 'Just now',
-          stepEvaluation: evaluation
-        };
-
-        setMessages(prev => [...prev, botReply]);
-        setIsTyping(false);
-      }, 1200);
-    } else {
-      // Standard text query Socratic answer
-      setTimeout(() => {
-        const reply = generateSocraticResponse(msgText);
+    setTimeout(() => {
+      // 1. Strict Scope Check
+      if (msgText && isQueryOutOfScope(msgText)) {
+        const redirectRes = getScopeRedirectionMessage(msgText);
         setMessages(prev => [
           ...prev,
           {
             id: `bot-${Date.now()}`,
             sender: 'bot',
-            text: reply,
+            text: redirectRes.text,
+            structuredResponse: redirectRes,
             time: 'Just now'
           }
         ]);
         setIsTyping(false);
-      }, 600);
-    }
+        return;
+      }
+
+      // 2. If student uploaded an image
+      if (imageToAnalyze) {
+        const isAnswerChecking = currentMode === 'check-answer' || 
+          msgText.toLowerCase().includes('check') || 
+          msgText.toLowerCase().includes('working') ||
+          msgText.toLowerCase().includes('steps');
+
+        if (isAnswerChecking) {
+          // Analyze steps and allocate marks
+          const evaluation = analyzeUploadedWorkingImage(
+            imageToAnalyze.name,
+            msgText,
+            selectedQuestionTag !== 'Auto-detect' ? selectedQuestionTag : undefined
+          );
+
+          setTutorContext(prev => ({
+            ...prev,
+            activeQuestionNumber: evaluation.questionNumber,
+            currentHintLevel: 1
+          }));
+
+          const botReply: ChatMessage = {
+            id: `bot-${Date.now()}`,
+            sender: 'bot',
+            text: `I have thoroughly inspected your handwritten working steps for **${evaluation.questionNumber}** (${evaluation.questionTitle}).\n\nHere is your **Step-by-Step Diagnostic Evaluation**: Each correct mathematical step receives a tick mark (✓) with allocated marks. Let's see what you did well and where we can refine!`,
+            time: 'Just now',
+            stepEvaluation: evaluation
+          };
+
+          setMessages(prev => [...prev, botReply]);
+        } else {
+          // It's a homework/exam question photo
+          const socraticRes = generateQuestionFirstGuidance(
+            msgText || imageToAnalyze.name,
+            selectedQuestionTag !== 'Auto-detect' ? selectedQuestionTag : undefined
+          );
+
+          setTutorContext(prev => ({
+            ...prev,
+            currentHintLevel: 1
+          }));
+
+          const botReply: ChatMessage = {
+            id: `bot-${Date.now()}`,
+            sender: 'bot',
+            text: socraticRes.text,
+            structuredResponse: socraticRes,
+            time: 'Just now'
+          };
+
+          setMessages(prev => [...prev, botReply]);
+        }
+        setIsTyping(false);
+        return;
+      }
+
+      // 3. Text queries in "Check My Answer" mode
+      if (currentMode === 'check-answer' || msgText.toLowerCase().startsWith('check') || msgText.toLowerCase().includes('my answer')) {
+        const checkRes = checkStudentAnswer(msgText, tutorContext);
+        setTutorContext(prev => ({
+          ...prev,
+          lastEvaluationVerdict: checkRes.evaluationVerdict
+        }));
+
+        setMessages(prev => [
+          ...prev,
+          {
+            id: `bot-${Date.now()}`,
+            sender: 'bot',
+            text: checkRes.text,
+            structuredResponse: checkRes,
+            time: 'Just now'
+          }
+        ]);
+        setIsTyping(false);
+        return;
+      }
+
+      // 4. Socratic Question-First Guidance for homework/exam questions
+      const socraticRes = generateQuestionFirstGuidance(msgText);
+      setTutorContext(prev => ({
+        ...prev,
+        currentHintLevel: 1
+      }));
+
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `bot-${Date.now()}`,
+          sender: 'bot',
+          text: socraticRes.text,
+          structuredResponse: socraticRes,
+          time: 'Just now'
+        }
+      ]);
+      setIsTyping(false);
+    }, 800);
+  };
+
+  // Progressive Hint Handler
+  const handleRequestNextHint = (explicitLevel?: number) => {
+    const nextLevel = explicitLevel !== undefined 
+      ? explicitLevel 
+      : (tutorContext.currentHintLevel >= 4 ? 5 : tutorContext.currentHintLevel + 1);
+
+    setTutorContext(prev => ({ ...prev, currentHintLevel: nextLevel }));
+    setIsTyping(true);
+
+    setTimeout(() => {
+      const hintRes = getProgressiveHint(nextLevel, tutorContext);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `bot-hint-${Date.now()}`,
+          sender: 'bot',
+          text: hintRes.text,
+          structuredResponse: hintRes,
+          time: 'Just now'
+        }
+      ]);
+      setIsTyping(false);
+    }, 500);
+  };
+
+  // "Explain it Differently" Style Switcher
+  const handleRequestDifferentStyle = (style: ExplanationStyle) => {
+    setIsTyping(true);
+    setTimeout(() => {
+      const styleContent = getDifferentExplanation(tutorContext.activeQuestionNumber || 'two-pq', style);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `bot-style-${Date.now()}`,
+          sender: 'bot',
+          text: styleContent,
+          time: 'Just now'
+        }
+      ]);
+      setIsTyping(false);
+    }, 400);
+  };
+
+  // Show "WHY?" Explanation
+  const handleShowWhy = (whyKey: string) => {
+    const whyObj = WHY_EXPLANATIONS[whyKey];
+    if (!whyObj) return;
+
+    setShowWhyModal(false);
+    setIsTyping(true);
+
+    setTimeout(() => {
+      const whyText = `❓ **${whyObj.question}**
+
+### 🧬 The Biological Reason
+${whyObj.coreReason}
+
+${whyObj.biologicalExplanation}
+
+---
+⚠️ **Common Student Misconception:**
+${whyObj.commonMisconception}`;
+
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `bot-why-${Date.now()}`,
+          sender: 'bot',
+          text: whyText,
+          time: 'Just now'
+        }
+      ]);
+      setIsTyping(false);
+    }, 400);
   };
 
   return (
@@ -300,27 +419,110 @@ Remember: Always start by identifying the homozygous recessive phenotype ($q^2$)
       className="space-y-6 pb-12"
       onPaste={handlePaste}
     >
-      {/* Header */}
-      <div className="bg-white p-6 rounded-2xl border-2 border-purple-200 shadow-xs space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-purple-900 text-xs font-bold">
+      {/* Primary Header & Welcome Hero */}
+      <div className="bg-white p-6 rounded-2xl border-2 border-purple-200 shadow-xs space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-100 text-purple-900 text-xs font-extrabold">
             <Bot className="w-4 h-4 text-purple-700" />
-            <span>Socratic AI PopGen Tutor &amp; Image Step-Checker</span>
+            <span>Chapter 5: Population Genetics Assistive Tutor</span>
           </div>
+
+          {/* Quick Action Badges */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowWhyModal(true)}
+              className="px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 text-xs font-bold border border-purple-300 flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <HelpCircle className="w-4 h-4 text-purple-700" />
+              <span>Ask "WHY?"</span>
+            </button>
+            <button
+              onClick={() => setShowSampleSelector(!showSampleSelector)}
+              className="px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 text-xs font-bold border border-purple-300 flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <FileText className="w-4 h-4 text-purple-700" />
+              <span>Sample Student Scans</span>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-black text-purple-950 flex items-center gap-2">
+            <span>👋 POPGEN AI HELP DESK</span>
+          </h2>
+          <p className="text-sm font-semibold text-purple-800 mt-1">
+            Your Dedicated Population Genetics Study Companion
+          </p>
+        </div>
+
+        {/* Guided Tutoring Motto Banner */}
+        <div className="p-3.5 bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-950 text-purple-100 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-inner">
+          <div className="space-y-0.5">
+            <div className="font-extrabold text-amber-300 flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-amber-300" />
+              <span>Core Assistive Principle: "DON'T JUST GIVE THE ANSWER. LEARN HOW TO FIND IT."</span>
+            </div>
+            <p className="text-purple-200 text-[11px] leading-relaxed">
+              I guide you with Socratic questions, progressive hints, and step-by-step diagnostic checks.
+            </p>
+          </div>
+          <div className="shrink-0 font-mono text-[11px] bg-purple-800/80 px-2.5 py-1 rounded-lg border border-purple-600 text-white">
+            READ → IDENTIFY → THINK → CALCULATE → INTERPRET
+          </div>
+        </div>
+
+        {/* Tutoring Mode Selector Pills */}
+        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-purple-100 text-xs">
+          <span className="font-bold text-purple-900 mr-1">Tutoring Mode:</span>
+          
           <button
-            onClick={() => setShowSampleSelector(!showSampleSelector)}
-            className="px-3 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-900 text-xs font-bold border border-purple-200 flex items-center gap-1.5 transition-colors"
+            onClick={() => setActiveMode('homework')}
+            className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeMode === 'homework'
+                ? 'bg-purple-800 text-white shadow-xs'
+                : 'bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200'
+            }`}
           >
-            <Camera className="w-3.5 h-3.5 text-purple-700" />
-            <span>Sample Student Photos</span>
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Homework Help</span>
+          </button>
+
+          <button
+            onClick={() => setActiveMode('exam')}
+            className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeMode === 'exam'
+                ? 'bg-purple-800 text-white shadow-xs'
+                : 'bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200'
+            }`}
+          >
+            <Award className="w-3.5 h-3.5" />
+            <span>Exam Question Mode</span>
+          </button>
+
+          <button
+            onClick={() => setActiveMode('check-answer')}
+            className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeMode === 'check-answer'
+                ? 'bg-purple-800 text-white shadow-xs'
+                : 'bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200'
+            }`}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>Check My Answer</span>
+          </button>
+
+          <button
+            onClick={() => setActiveMode('concept')}
+            className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeMode === 'concept'
+                ? 'bg-purple-800 text-white shadow-xs'
+                : 'bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200'
+            }`}
+          >
+            <Brain className="w-3.5 h-3.5" />
+            <span>Concept Dialogue</span>
           </button>
         </div>
-        <h2 className="text-2xl sm:text-3xl font-black text-purple-950">
-          GenAIde AI Help Desk
-        </h2>
-        <p className="text-xs sm:text-sm text-purple-800">
-          Ask questions, or <strong>upload photos of your handwritten working steps</strong>. GenAIde verifies your calculations step-by-step with allocated marks, and guides you socratically through mistakes.
-        </p>
       </div>
 
       {/* Sample Handwritten Working Selector Drawer */}
@@ -330,7 +532,7 @@ Remember: Always start by identifying the homozygous recessive phenotype ($q^2$)
             <div className="flex items-center gap-2">
               <Camera className="w-4 h-4 text-purple-300" />
               <h3 className="font-bold text-sm text-purple-100">
-                Try Sample Handwritten Student Working Images
+                Sample Student Calculation Scans
               </h3>
             </div>
             <button
@@ -341,7 +543,7 @@ Remember: Always start by identifying the homozygous recessive phenotype ($q^2$)
             </button>
           </div>
           <p className="text-xs text-purple-200">
-            No camera or notebook photo right now? Select one of these realistic student handwritten calculation scans to test how AI checks your steps and awards tick marks:
+            Select one of these handwritten calculation scans to test how AI checks your steps and awards tick marks:
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -382,25 +584,76 @@ Remember: Always start by identifying the homozygous recessive phenotype ($q^2$)
         </div>
       )}
 
-      {/* Main Chat & Toolbox layout */}
+      {/* Main Chat Layout: Left 2 Columns Chat, Right 1 Column Toolbox & Guidance */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
         {/* Left 2 Columns: Chat Window */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border-2 border-purple-200 shadow-xs flex flex-col h-[720px] overflow-hidden">
+        <div className="lg:col-span-2 bg-white rounded-2xl border-2 border-purple-200 shadow-xs flex flex-col h-[740px] overflow-hidden">
           
-          {/* Top Chat Bar with Image Upload Shortcut */}
-          <div className="p-3 bg-purple-50/80 border-b border-purple-200 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div className="flex items-center gap-1.5 text-purple-900 font-bold">
-              <Sparkles className="w-3.5 h-3.5 text-purple-700" />
-              <span>Socratic PopGen Dialogue</span>
-            </div>
+          {/* Top Chat Bar: Primary Input Option Buttons (Photo, Upload, Type, Check, Hint, Why) */}
+          <div className="p-3 bg-purple-50/90 border-b border-purple-200 flex flex-wrap items-center justify-between gap-2 text-xs">
             <div className="flex items-center gap-2">
+              <span className="font-extrabold text-purple-950 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-purple-700" />
+                <span>Input Options:</span>
+              </span>
+
+              {/* 📷 Take Photo */}
+              <button
+                onClick={() => setShowCameraModal(true)}
+                className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-purple-100 text-purple-900 font-bold border border-purple-300 flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
+                title="Take photo of homework question or written working"
+              >
+                <Camera className="w-3.5 h-3.5 text-purple-700" />
+                <span>Take Photo</span>
+              </button>
+
+              {/* 🖼 Upload Image */}
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="px-2.5 py-1 rounded-lg bg-white hover:bg-purple-100 text-purple-900 font-bold text-xs border border-purple-300 flex items-center gap-1.5 shadow-2xs transition-colors"
-                title="Upload photo of your notebook or exam sheet"
+                className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-purple-100 text-purple-900 font-bold border border-purple-300 flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
+                title="Upload screenshot or worksheet image"
               >
                 <Upload className="w-3.5 h-3.5 text-purple-700" />
-                <span>Upload Working Photo</span>
+                <span>Upload Image</span>
+              </button>
+
+              {/* ✅ Check My Answer */}
+              <button
+                onClick={() => {
+                  setActiveMode('check-answer');
+                  inputRef.current?.focus();
+                }}
+                className={`px-2.5 py-1.5 rounded-lg font-bold border flex items-center gap-1 shadow-2xs transition-colors cursor-pointer ${
+                  activeMode === 'check-answer'
+                    ? 'bg-purple-800 text-white border-purple-900'
+                    : 'bg-white hover:bg-purple-100 text-purple-900 border-purple-300'
+                }`}
+                title="Evaluate your working or answer"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Check My Answer</span>
+              </button>
+            </div>
+
+            {/* Hint & Why quick triggers */}
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => handleRequestNextHint()}
+                className="px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 font-extrabold border border-amber-300 flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
+                title="Reveal progressive hint"
+              >
+                <Lightbulb className="w-3.5 h-3.5 text-amber-600" />
+                <span>I Need a Hint</span>
+              </button>
+
+              <button
+                onClick={() => setShowWhyModal(true)}
+                className="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-900 font-extrabold border border-indigo-300 flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
+                title="Why is this formula or rule true?"
+              >
+                <HelpCircle className="w-3.5 h-3.5 text-indigo-600" />
+                <span>WHY?</span>
               </button>
             </div>
           </div>
@@ -435,10 +688,13 @@ Remember: Always start by identifying the homozygous recessive phenotype ($q^2$)
                   {/* User Uploaded Image Preview in Chat Bubble */}
                   {m.imageUrl && (
                     <div className="rounded-xl overflow-hidden border border-white/20 bg-purple-950/20 p-1 space-y-1">
-                      <div className="relative group cursor-pointer" onClick={() => setPreviewModalImage({ url: m.imageUrl!, title: m.imageName || 'Handwritten Working' })}>
+                      <div 
+                        className="relative group cursor-pointer" 
+                        onClick={() => setPreviewModalImage({ url: m.imageUrl!, title: m.imageName || 'Uploaded Working' })}
+                      >
                         <img 
                           src={m.imageUrl} 
-                          alt="Uploaded steps" 
+                          alt="Uploaded question or steps" 
                           className="w-full max-h-56 object-contain rounded-lg bg-white"
                           referrerPolicy="no-referrer"
                         />
@@ -448,18 +704,80 @@ Remember: Always start by identifying the homozygous recessive phenotype ($q^2$)
                         </div>
                       </div>
                       <div className="flex items-center justify-between text-[11px] text-purple-100 px-1 font-mono">
-                        <span>📷 {m.imageName || 'steps.jpg'}</span>
-                        <span className="text-[10px] bg-purple-900/60 px-1.5 py-0.5 rounded">Uploaded Step Photo</span>
+                        <span>📷 {m.imageName || 'question.jpg'}</span>
+                        <span className="text-[10px] bg-purple-900/60 px-1.5 py-0.5 rounded">PopGen Image Input</span>
                       </div>
                     </div>
                   )}
 
-                  {/* Message Text */}
+                  {/* Message Text with Structured Styling */}
                   <div className="whitespace-pre-line leading-relaxed">
                     {m.text}
                   </div>
 
-                  {/* Rich Step-by-Step Diagnostic Review Card */}
+                  {/* Suggested Action Chips (if provided) */}
+                  {m.structuredResponse?.suggestedActions && m.structuredResponse.suggestedActions.length > 0 && (
+                    <div className="pt-2 border-t border-purple-100 flex flex-wrap gap-1.5">
+                      {m.structuredResponse.suggestedActions.map((act, i) => (
+                        <button
+                          key={i}
+                          onClick={() => handleSend(act.actionText)}
+                          className="px-2.5 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-900 font-bold text-[11px] border border-purple-200 transition-colors flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>{act.label}</span>
+                          <ArrowRight className="w-3 h-3 text-purple-600" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* "Explain It Differently" Interactive Selector */}
+                  {m.sender === 'bot' && !m.stepEvaluation && (
+                    <div className="pt-2 border-t border-purple-100 flex flex-wrap items-center gap-1.5 text-[11px] text-purple-800">
+                      <span className="font-bold text-purple-950 flex items-center gap-1">
+                        <Compass className="w-3.5 h-3.5 text-purple-700" />
+                        <span>Explain differently:</span>
+                      </span>
+                      <button
+                        onClick={() => handleRequestDifferentStyle('simple')}
+                        className="px-2 py-0.5 rounded bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-semibold cursor-pointer"
+                      >
+                        🧒 Simple
+                      </button>
+                      <button
+                        onClick={() => handleRequestDifferentStyle('analogy')}
+                        className="px-2 py-0.5 rounded bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-semibold cursor-pointer"
+                      >
+                        🧠 Analogy
+                      </button>
+                      <button
+                        onClick={() => handleRequestDifferentStyle('visual')}
+                        className="px-2 py-0.5 rounded bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-semibold cursor-pointer"
+                      >
+                        📊 Visual
+                      </button>
+                      <button
+                        onClick={() => handleRequestDifferentStyle('step-by-step')}
+                        className="px-2 py-0.5 rounded bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-semibold cursor-pointer"
+                      >
+                        🔢 Steps
+                      </button>
+                      <button
+                        onClick={() => handleRequestDifferentStyle('exam')}
+                        className="px-2 py-0.5 rounded bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-semibold cursor-pointer"
+                      >
+                        📝 Exam Rubric
+                      </button>
+                      <button
+                        onClick={() => handleRequestDifferentStyle('biological')}
+                        className="px-2 py-0.5 rounded bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-semibold cursor-pointer"
+                      >
+                        🔬 Biology
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Rich Step-by-Step Diagnostic Review Card (for Check My Steps) */}
                   {m.stepEvaluation && (
                     <div className="mt-3 p-4 bg-purple-50/80 rounded-xl border-2 border-purple-300 space-y-4 text-purple-950 not-prose">
                       
@@ -479,7 +797,7 @@ Remember: Always start by identifying the homozygous recessive phenotype ($q^2$)
                           </div>
                         </div>
 
-                        {/* Verdict / Score Badge */}
+                        {/* Score Badge */}
                         <div className="flex items-center gap-2">
                           <div className={`px-3 py-1.5 rounded-xl font-extrabold text-xs flex items-center gap-1.5 shadow-2xs ${
                             m.stepEvaluation.verdict === 'all-correct'
@@ -598,19 +916,19 @@ Remember: Always start by identifying the homozygous recessive phenotype ($q^2$)
                         <div className="flex flex-wrap gap-1.5 pt-1">
                           <button
                             onClick={() => handleSend("Explain Step 3 in detail.")}
-                            className="px-2.5 py-1 rounded-md bg-purple-800 hover:bg-purple-700 text-purple-100 text-xs font-semibold border border-purple-600 transition-colors"
+                            className="px-2.5 py-1 rounded-md bg-purple-800 hover:bg-purple-700 text-purple-100 text-xs font-semibold border border-purple-600 transition-colors cursor-pointer"
                           >
                             Explain Step 3 in detail →
                           </button>
                           <button
                             onClick={() => handleSend("Show me the correct formula for this step.")}
-                            className="px-2.5 py-1 rounded-md bg-purple-800 hover:bg-purple-700 text-purple-100 text-xs font-semibold border border-purple-600 transition-colors"
+                            className="px-2.5 py-1 rounded-md bg-purple-800 hover:bg-purple-700 text-purple-100 text-xs font-semibold border border-purple-600 transition-colors cursor-pointer"
                           >
                             Show formula template →
                           </button>
                           <button
                             onClick={() => handleSend("How should I round my final answer for this population size?")}
-                            className="px-2.5 py-1 rounded-md bg-purple-800 hover:bg-purple-700 text-purple-100 text-xs font-semibold border border-purple-600 transition-colors"
+                            className="px-2.5 py-1 rounded-md bg-purple-800 hover:bg-purple-700 text-purple-100 text-xs font-semibold border border-purple-600 transition-colors cursor-pointer"
                           >
                             Decimal place rules →
                           </button>
@@ -627,14 +945,14 @@ Remember: Always start by identifying the homozygous recessive phenotype ($q^2$)
                 <span className="w-2 h-2 rounded-full bg-purple-600 animate-bounce"></span>
                 <span className="w-2 h-2 rounded-full bg-purple-600 animate-bounce [animation-delay:0.2s]"></span>
                 <span className="w-2 h-2 rounded-full bg-purple-600 animate-bounce [animation-delay:0.4s]"></span>
-                <span>GenAIde is reading your steps and checking against the mark scheme...</span>
+                <span>GenAIde PopGen Tutor is analyzing the question and formulating Socratic guidance...</span>
               </div>
             )}
             
             <div ref={chatBottomRef} />
           </div>
 
-          {/* Staged Image Banner (ready to send) */}
+          {/* Staged Image Confirmation Banner */}
           {stagedImage && (
             <div className="p-3 bg-purple-100 border-t-2 border-purple-300 flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in duration-150">
               <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -654,14 +972,14 @@ Remember: Always start by identifying the homozygous recessive phenotype ($q^2$)
                 </div>
                 <div className="space-y-0.5 text-xs text-purple-950 flex-1">
                   <div className="font-extrabold truncate max-w-xs">{stagedImage.name}</div>
-                  <div className="text-[11px] text-purple-700">{stagedImage.size} • Ready for AI step checking</div>
-                  {/* Question Tag Selector */}
+                  <div className="text-[11px] text-purple-700">{stagedImage.size} • Ready for AI Socratic Analysis</div>
+                  {/* Target Question Tag Selector */}
                   <div className="flex items-center gap-1.5 pt-0.5">
                     <span className="text-[10px] font-bold text-purple-900">Target Question:</span>
                     <select
                       value={selectedQuestionTag}
                       onChange={(e) => setSelectedQuestionTag(e.target.value)}
-                      className="px-2 py-0.5 rounded bg-white border border-purple-300 text-[11px] font-bold text-purple-950 focus:outline-hidden"
+                      className="px-2 py-0.5 rounded bg-white border border-purple-300 text-[11px] font-bold text-purple-950 focus:outline-hidden cursor-pointer"
                     >
                       <option value="Auto-detect">✨ Auto-detect Question</option>
                       {allQuestions.map(q => (
@@ -677,18 +995,26 @@ Remember: Always start by identifying the homozygous recessive phenotype ($q^2$)
               <div className="flex items-center gap-2 self-end sm:self-center">
                 <button
                   onClick={() => setStagedImage(null)}
-                  className="p-1.5 rounded-lg hover:bg-purple-200 text-purple-800 text-xs font-bold flex items-center gap-1"
+                  className="p-1.5 rounded-lg hover:bg-purple-200 text-purple-800 text-xs font-bold flex items-center gap-1 cursor-pointer"
                   title="Remove image"
                 >
                   <X className="w-4 h-4" />
-                  <span className="hidden sm:inline">Cancel</span>
+                  <span>Remove</span>
+                </button>
+                <button
+                  onClick={() => setShowCameraModal(true)}
+                  className="p-1.5 rounded-lg hover:bg-purple-200 text-purple-800 text-xs font-bold flex items-center gap-1 cursor-pointer"
+                  title="Retake photo"
+                >
+                  <Camera className="w-4 h-4" />
+                  <span>Retake</span>
                 </button>
                 <button
                   onClick={() => handleSend()}
-                  className="px-4 py-2 rounded-xl bg-purple-800 hover:bg-purple-900 text-white font-extrabold text-xs shadow-xs flex items-center gap-1.5 active:scale-95 transition-all"
+                  className="px-4 py-2 rounded-xl bg-purple-900 hover:bg-purple-950 text-white font-extrabold text-xs shadow-xs flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
                 >
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>Check My Steps Now</span>
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>Ask AI Tutor</span>
                 </button>
               </div>
             </div>
@@ -700,7 +1026,7 @@ Remember: Always start by identifying the homozygous recessive phenotype ($q^2$)
               <button
                 key={i}
                 onClick={() => handleSend(query)}
-                className="shrink-0 px-2.5 py-1 rounded-full bg-white hover:bg-purple-200 text-purple-900 text-[11px] font-semibold border border-purple-200 shadow-2xs transition-colors"
+                className="shrink-0 px-2.5 py-1 rounded-full bg-white hover:bg-purple-200 text-purple-900 text-[11px] font-semibold border border-purple-200 shadow-2xs transition-colors cursor-pointer"
               >
                 {query}
               </button>
@@ -717,12 +1043,22 @@ Remember: Always start by identifying the homozygous recessive phenotype ($q^2$)
               className="hidden"
             />
             
+            {/* Quick Camera Snapshot Button */}
             <button
-              onClick={() => fileInputRef.current?.click()}
-              className="p-2.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 border border-purple-300 transition-all flex items-center justify-center shrink-0"
-              title="Upload photo of your handwritten working (or paste with Ctrl+V)"
+              onClick={() => setShowCameraModal(true)}
+              className="p-2.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 border border-purple-300 transition-all flex items-center justify-center shrink-0 cursor-pointer"
+              title="Snap photo with camera"
             >
               <Camera className="w-4 h-4 text-purple-700" />
+            </button>
+
+            {/* Quick Upload Button */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 border border-purple-300 transition-all flex items-center justify-center shrink-0 cursor-pointer"
+              title="Upload question screenshot or photo (Ctrl+V supported)"
+            >
+              <Upload className="w-4 h-4 text-purple-700" />
             </button>
 
             <input
@@ -733,73 +1069,218 @@ Remember: Always start by identifying the homozygous recessive phenotype ($q^2$)
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSend();
               }}
-              placeholder={stagedImage ? "Add an optional question about your photo (or press Send)..." : "Ask a question or paste working image (Ctrl+V)..."}
+              placeholder={
+                activeMode === 'check-answer'
+                  ? "Type your calculated answer (e.g. q²=0.16, q=0.4, 2pq=0.48)..."
+                  : activeMode === 'exam'
+                  ? "Enter an exam question (e.g. Calculate carrier frequency in 5000 individuals)..."
+                  : stagedImage
+                  ? "Add an optional question about your photo (or press Send)..."
+                  : "Type your PopGen question or paste image (Ctrl+V)..."
+              }
               className="flex-1 px-3 py-2 rounded-xl border border-purple-300 font-mono text-xs sm:text-sm text-purple-950 focus:ring-2 focus:ring-purple-500 focus:outline-hidden"
             />
             
             <button
               onClick={() => handleSend()}
-              className="px-4 py-2 rounded-xl bg-purple-800 hover:bg-purple-900 text-white font-bold text-xs shadow-xs flex items-center gap-1.5 active:scale-95 transition-all"
+              className="px-4 py-2 rounded-xl bg-purple-900 hover:bg-purple-950 text-white font-bold text-xs shadow-xs flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
             >
               <Send className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Ask AI</span>
+              <span className="hidden sm:inline">Ask Tutor</span>
             </button>
           </div>
         </div>
 
-        {/* Right 1 Column: Math Toolbox + Persona Info */}
+        {/* Right 1 Column: Progressive Hint Ladder + MathToolbox + PopGen Scope Guard */}
         <div className="space-y-4">
           
-          {/* Quick Photo Upload Helper Card */}
+          {/* Progressive Hint Progression Stepper */}
           <div className="bg-white p-4 rounded-2xl border-2 border-purple-200 shadow-xs space-y-3">
-            <div className="font-extrabold text-sm text-purple-950 flex items-center gap-2">
-              <Camera className="w-4 h-4 text-purple-700" />
-              <span>Submit Working Image</span>
-            </div>
-            <p className="text-xs text-purple-800 leading-relaxed">
-              Snap a photo of your notebook or test paper. AI will analyze each step and verify allocated marks!
-            </p>
-            
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              className="p-4 rounded-xl border-2 border-dashed border-purple-300 hover:border-purple-500 hover:bg-purple-50/50 cursor-pointer text-center space-y-1.5 transition-all"
-            >
-              <Upload className="w-5 h-5 mx-auto text-purple-600" />
-              <div className="font-bold text-xs text-purple-900">
-                Click to browse or drop photo here
+            <div className="flex items-center justify-between border-b border-purple-100 pb-2">
+              <div className="font-extrabold text-sm text-purple-950 flex items-center gap-1.5">
+                <Lightbulb className="w-4 h-4 text-amber-500" />
+                <span>Progressive Hint Ladder</span>
               </div>
-              <div className="text-[11px] text-purple-600">
-                Supports PNG, JPG, or paste directly (Ctrl+V)
-              </div>
+              <span className="text-[10px] font-mono font-bold bg-purple-100 text-purple-900 px-2 py-0.5 rounded">
+                Level {tutorContext.currentHintLevel} / 4
+              </span>
             </div>
 
+            <p className="text-xs text-purple-800 leading-relaxed">
+              Never get stuck! Unlock hints one level at a time so you learn the mathematical reasoning:
+            </p>
+
+            <div className="space-y-2">
+              <button
+                onClick={() => handleRequestNextHint(1)}
+                className="w-full text-left p-2.5 rounded-xl border border-purple-200 hover:border-purple-400 hover:bg-purple-50 transition-all flex items-center justify-between text-xs cursor-pointer group"
+              >
+                <div>
+                  <div className="font-bold text-purple-950 group-hover:text-purple-700">
+                    Hint 1 — THINK
+                  </div>
+                  <div className="text-[11px] text-purple-700">Guiding conceptual prompt</div>
+                </div>
+                <ArrowRight className="w-3.5 h-3.5 text-purple-400 group-hover:text-purple-700" />
+              </button>
+
+              <button
+                onClick={() => handleRequestNextHint(2)}
+                className="w-full text-left p-2.5 rounded-xl border border-purple-200 hover:border-purple-400 hover:bg-purple-50 transition-all flex items-center justify-between text-xs cursor-pointer group"
+              >
+                <div>
+                  <div className="font-bold text-purple-950 group-hover:text-purple-700">
+                    Hint 2 — REMEMBER
+                  </div>
+                  <div className="text-[11px] text-purple-700">Formula &amp; concept reminder</div>
+                </div>
+                <ArrowRight className="w-3.5 h-3.5 text-purple-400 group-hover:text-purple-700" />
+              </button>
+
+              <button
+                onClick={() => handleRequestNextHint(3)}
+                className="w-full text-left p-2.5 rounded-xl border border-purple-200 hover:border-purple-400 hover:bg-purple-50 transition-all flex items-center justify-between text-xs cursor-pointer group"
+              >
+                <div>
+                  <div className="font-bold text-purple-950 group-hover:text-purple-700">
+                    Hint 3 — NEXT STEP
+                  </div>
+                  <div className="text-[11px] text-purple-700">Specific calculation operation</div>
+                </div>
+                <ArrowRight className="w-3.5 h-3.5 text-purple-400 group-hover:text-purple-700" />
+              </button>
+
+              <button
+                onClick={() => handleRequestNextHint(4)}
+                className="w-full text-left p-2.5 rounded-xl border border-purple-200 hover:border-purple-400 hover:bg-purple-50 transition-all flex items-center justify-between text-xs cursor-pointer group"
+              >
+                <div>
+                  <div className="font-bold text-purple-950 group-hover:text-purple-700">
+                    Hint 4 — SHOW REASONING
+                  </div>
+                  <div className="text-[11px] text-purple-700">Complete step-by-step logic</div>
+                </div>
+                <ArrowRight className="w-3.5 h-3.5 text-purple-400 group-hover:text-purple-700" />
+              </button>
+            </div>
+
+            {/* Complete Solution Reveal Button */}
             <button
-              onClick={() => setShowSampleSelector(true)}
-              className="w-full py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 font-bold text-xs border border-purple-200 flex items-center justify-center gap-1.5"
+              onClick={() => handleRequestNextHint(5)}
+              className="w-full py-2 rounded-xl bg-purple-900 hover:bg-purple-950 text-white font-extrabold text-xs shadow-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
-              <span>🖼️ Select from Sample Student Scans</span>
+              <Check className="w-4 h-4 text-emerald-400" />
+              <span>Reveal Complete Solution</span>
             </button>
           </div>
 
+          {/* MathToolbox for PopGen Symbol Insertion */}
           <MathToolbox lastActiveInputRef={inputRef} />
 
-          <div className="bg-white p-4 rounded-xl border border-purple-200 shadow-2xs space-y-2 text-xs text-purple-950">
-            <div className="font-bold text-purple-900 border-b border-purple-100 pb-1 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-purple-600" />
-              <span>Socratic AI Principles</span>
+          {/* Chapter 5 Topic Scope & Matriculation Checklist */}
+          <div className="bg-white p-4 rounded-xl border border-purple-200 shadow-2xs space-y-2.5 text-xs text-purple-950">
+            <div className="font-extrabold text-purple-900 border-b border-purple-100 pb-1.5 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>Chapter 5 Syllabus Scope</span>
+              </span>
+              <span className="text-[10px] font-bold text-purple-600 uppercase">Matriculation</span>
             </div>
-            <p className="text-purple-800 text-[11px] leading-relaxed">
-              GenAIde is designed not to cheat for you, but to scaffold your mental models. It tests whether you understand:
+
+            <p className="text-[11px] text-purple-800 leading-relaxed">
+              This AI tutor specializes strictly in Malaysian Matriculation Chapter 5:
             </p>
-            <ul className="list-disc pl-4 space-y-1 text-purple-800 text-[11px]">
-              <li>Which phenotype is recessive ($q^2$)</li>
-              <li>Whether equilibrium has broken</li>
-              <li>Why the factor of 2 belongs in $2pq$</li>
-              <li>How to avoid premature rounding</li>
+
+            <ul className="space-y-1.5 text-[11px] text-purple-900">
+              <li className="flex items-start gap-1.5">
+                <span className="text-purple-600 font-bold">•</span>
+                <span><strong>Allele vs Genotype:</strong> $p, q$ vs $p^2, 2pq, q^2$</span>
+              </li>
+              <li className="flex items-start gap-1.5">
+                <span className="text-purple-600 font-bold">•</span>
+                <span><strong>Hardy-Weinberg:</strong> $p+q=1$ &amp; $p^2+2pq+q^2=1$</span>
+              </li>
+              <li className="flex items-start gap-1.5">
+                <span className="text-purple-600 font-bold">•</span>
+                <span><strong>5 Equilibrium Conditions:</strong> Large pop, Random mating, No mutation, No migration, No selection</span>
+              </li>
+              <li className="flex items-start gap-1.5">
+                <span className="text-purple-600 font-bold">•</span>
+                <span><strong>Forces Changing Frequencies:</strong> Drift, Selection, Gene Flow</span>
+              </li>
+              <li className="flex items-start gap-1.5">
+                <span className="text-purple-600 font-bold">•</span>
+                <span><strong>Gene Pool Allele Counting:</strong> $2 \\times N$ when H-W broken</span>
+              </li>
             </ul>
           </div>
         </div>
       </div>
+
+      {/* Interactive "WHY?" Modal Drawer */}
+      {showWhyModal && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => setShowWhyModal(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl max-w-xl w-full p-5 space-y-4 overflow-hidden shadow-2xl border-2 border-purple-300 max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-purple-200 pb-3">
+              <div className="flex items-center gap-2">
+                <HelpCircle className="w-5 h-5 text-purple-700" />
+                <h3 className="font-black text-base text-purple-950">
+                  Ask "WHY?": Foundational PopGen Logic
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowWhyModal(false)}
+                className="p-1 rounded-lg hover:bg-purple-100 text-purple-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-purple-800">
+              Select a core principle below to inspect why the mathematics and biology work this way:
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 overflow-y-auto max-h-60 pr-1">
+              {Object.entries(WHY_EXPLANATIONS).map(([key, item]) => (
+                <button
+                  key={key}
+                  onClick={() => handleShowWhy(key)}
+                  className="p-3 text-left rounded-xl border border-purple-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-xs space-y-1 group cursor-pointer"
+                >
+                  <div className="font-bold text-purple-950 group-hover:text-purple-800">
+                    {item.question}
+                  </div>
+                  <p className="text-[11px] text-purple-600 line-clamp-2">
+                    {item.coreReason}
+                  </p>
+                </button>
+              ))}
+            </div>
+
+            <div className="pt-2 border-t border-purple-200 flex justify-end">
+              <button
+                onClick={() => setShowWhyModal(false)}
+                className="px-4 py-1.5 rounded-xl bg-purple-900 text-white font-bold text-xs cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Live Camera Capture Modal */}
+      <CameraCaptureModal
+        isOpen={showCameraModal}
+        onClose={() => setShowCameraModal(false)}
+        onCapture={handleCameraCapture}
+      />
 
       {/* Image Preview Modal */}
       {previewModalImage && (
@@ -817,7 +1298,7 @@ Remember: Always start by identifying the homozygous recessive phenotype ($q^2$)
               </h4>
               <button 
                 onClick={() => setPreviewModalImage(null)}
-                className="p-1 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-black"
+                className="p-1 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-black cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -833,7 +1314,7 @@ Remember: Always start by identifying the homozygous recessive phenotype ($q^2$)
             <div className="text-right">
               <button
                 onClick={() => setPreviewModalImage(null)}
-                className="px-4 py-1.5 rounded-lg bg-purple-900 text-white font-bold text-xs"
+                className="px-4 py-1.5 rounded-lg bg-purple-900 text-white font-bold text-xs cursor-pointer"
               >
                 Close Preview
               </button>

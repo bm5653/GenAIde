@@ -104,7 +104,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-6 pb-20 sm:pb-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-6 sm:py-8">
         {activeTab === 'home' && (
           <HomeView onNavigate={handleTabChange} />
         )}
@@ -161,42 +161,58 @@ export default function App() {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="bg-[#2E1065] text-purple-200 border-t border-purple-900 mt-auto py-8 mb-14 sm:mb-0 text-xs">
-        <div className="max-w-7xl mx-auto px-4 space-y-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-purple-800/80 pb-6 text-center md:text-left">
-            <div className="space-y-1">
-              <div className="text-base font-extrabold text-white tracking-wide flex items-center justify-center md:justify-start gap-2">
-                <span>GenAIde: Your AI-Aided PopGen Tutor</span>
-                <span className="text-[10px] font-bold uppercase bg-purple-800 text-purple-200 px-2 py-0.5 rounded-full border border-purple-700">
-                  Chapter 5
-                </span>
-              </div>
-              <p className="text-purple-300 text-xs">
-                Empowering Matriculation Biology Students with Conceptual Clarity & Exam Precision.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3.5 text-xs font-medium text-purple-200">
-              <button onClick={() => handleTabChange('learn')} className="hover:text-white transition-colors">Curriculum</button>
-              <button onClick={() => handleTabChange('toolbox')} className="hover:text-white transition-colors">Toolbox</button>
-              <button onClick={() => handleTabChange('practice')} className="hover:text-white transition-colors">Solver</button>
-              <button onClick={() => handleTabChange('past-year')} className="hover:text-white transition-colors">Past Year</button>
-              <button onClick={() => handleTabChange('new-population')} className="hover:text-white transition-colors">New Pop</button>
-              <button onClick={() => handleTabChange('pitfalls')} className="hover:text-white transition-colors">Pitfalls</button>
-              <button onClick={() => handleTabChange('exit-ticket')} className="hover:text-amber-300 text-amber-300 font-semibold transition-colors">Exit Ticket</button>
-              <button onClick={() => handleTabChange('ai-help')} className="hover:text-emerald-300 text-emerald-300 font-semibold transition-colors">AI Help Desk</button>
-              <button onClick={() => handleTabChange('notes')} className="hover:text-cyan-300 text-cyan-200 transition-colors">Notes & Flashcards</button>
-              <button onClick={() => handleTabChange('progress')} className="hover:text-rose-300 text-rose-200 transition-colors">My Progress</button>
-            </div>
+      {/* Simple, Centered Footer parallel to the Header GenAIde */}
+      <footer className="bg-[#2E1065] text-purple-200 border-t border-purple-900 mt-auto py-8 text-xs">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col items-center justify-center text-center space-y-6">
+          {/* Main Brand Section - Centered & Parallel with Header */}
+          <div className="flex flex-col items-center justify-center space-y-2">
+            <button
+              onClick={() => handleTabChange('home')}
+              className="text-base sm:text-lg font-extrabold text-white tracking-wide inline-flex items-center justify-center gap-2 hover:text-purple-200 transition-colors group cursor-pointer"
+              title="Return to Home"
+            >
+              <span>GenAIde: Your AI-Aided PopGen Tutor</span>
+              <span className="text-[10px] font-bold uppercase bg-purple-800 text-purple-200 px-2.5 py-0.5 rounded-full border border-purple-700 group-hover:border-purple-500 transition-colors">
+                Chapter 5
+              </span>
+            </button>
+            <p className="text-purple-300 text-xs sm:text-sm max-w-xl mx-auto leading-relaxed">
+              Empowering Matriculation Biology Students with Conceptual Clarity &amp; Exam Precision.
+            </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-purple-400 text-[11px]">
+          {/* Centered Navigation Links Row */}
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2.5 text-xs font-medium text-purple-200 max-w-4xl mx-auto pt-1 pb-1">
+            <button onClick={() => handleTabChange('home')} className="hover:text-white transition-colors cursor-pointer">Home</button>
+            <span className="text-purple-700 hidden sm:inline">•</span>
+            <button onClick={() => handleTabChange('learn')} className="hover:text-white transition-colors cursor-pointer">Curriculum</button>
+            <span className="text-purple-700 hidden sm:inline">•</span>
+            <button onClick={() => handleTabChange('toolbox')} className="hover:text-white transition-colors cursor-pointer">Toolbox</button>
+            <span className="text-purple-700 hidden sm:inline">•</span>
+            <button onClick={() => handleTabChange('practice')} className="hover:text-white transition-colors cursor-pointer">Solver</button>
+            <span className="text-purple-700 hidden sm:inline">•</span>
+            <button onClick={() => handleTabChange('past-year')} className="hover:text-white transition-colors cursor-pointer">Past Year</button>
+            <span className="text-purple-700 hidden sm:inline">•</span>
+            <button onClick={() => handleTabChange('new-population')} className="hover:text-white transition-colors cursor-pointer">New Pop</button>
+            <span className="text-purple-700 hidden sm:inline">•</span>
+            <button onClick={() => handleTabChange('pitfalls')} className="hover:text-white transition-colors cursor-pointer">Pitfalls</button>
+            <span className="text-purple-700 hidden sm:inline">•</span>
+            <button onClick={() => handleTabChange('exit-ticket')} className="hover:text-white transition-colors cursor-pointer">Exit Ticket</button>
+            <span className="text-purple-700 hidden sm:inline">•</span>
+            <button onClick={() => handleTabChange('ai-help')} className="hover:text-white transition-colors cursor-pointer">AI Help</button>
+            <span className="text-purple-700 hidden sm:inline">•</span>
+            <button onClick={() => handleTabChange('notes')} className="hover:text-white transition-colors cursor-pointer">Notes &amp; Cards</button>
+            <span className="text-purple-700 hidden sm:inline">•</span>
+            <button onClick={() => handleTabChange('progress')} className="hover:text-white transition-colors cursor-pointer">Progress</button>
+          </div>
+
+          {/* Centered Sub-footer Divider & Metadata */}
+          <div className="w-full max-w-3xl pt-5 border-t border-purple-800/80 flex flex-col items-center justify-center gap-1.5 text-purple-300 text-[11px] sm:text-xs text-center">
             <div>
-              &copy; {new Date().getFullYear()} GenAIde. Developed strictly from official Malaysian Matriculation Biology curriculum & past-year materials.
+              &copy; {new Date().getFullYear()} GenAIde. Developed strictly from official Malaysian Matriculation Biology curriculum &amp; past-year materials.
             </div>
-            <div className="flex items-center gap-1">
-              <span>"Think First. Calculate Second. Use AI Wisely."</span>
+            <div className="italic text-purple-300/85">
+              "Think First. Calculate Second. Use AI Wisely."
             </div>
           </div>
         </div>
