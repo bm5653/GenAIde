@@ -14,11 +14,12 @@ import {
   ArrowRight,
   BookOpen,
   Award,
-  RefreshCw
+  RefreshCw,
+  Lightbulb
 } from 'lucide-react';
 
 export const PitfallsView: React.FC = () => {
-  const [activeTabMode, setActiveTabMode] = useState<'guide' | 'practice'>('guide');
+  const [activeTabMode, setActiveTabMode] = useState<'practice' | 'guide'>('practice');
   const [searchQuery, setSearchQuery] = useState('');
   const [activePitfallId, setActivePitfallId] = useState<number>(1);
   const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
@@ -27,6 +28,7 @@ export const PitfallsView: React.FC = () => {
   const [activeQuestionIdx, setActiveQuestionIdx] = useState<number>(0);
   const [selectedPracticeAnswers, setSelectedPracticeAnswers] = useState<Record<number, number>>({});
   const [showModelWorking, setShowModelWorking] = useState<Record<number, boolean>>({});
+  const [revealedHints, setRevealedHints] = useState<Record<number, boolean>>({});
 
   const filteredPitfalls = PITFALLS_DATA.filter(p => 
     p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -48,6 +50,10 @@ export const PitfallsView: React.FC = () => {
     setShowModelWorking(prev => ({ ...prev, [questionId]: !prev[questionId] }));
   };
 
+  const toggleHint = (questionId: number) => {
+    setRevealedHints(prev => ({ ...prev, [questionId]: !prev[questionId] }));
+  };
+
   const currentPracticeQ = PITFALL_PRACTICE_QUESTIONS[activeQuestionIdx];
   const answeredPracticeCount = Object.keys(selectedPracticeAnswers).length;
   const correctPracticeCount = PITFALL_PRACTICE_QUESTIONS.filter(
@@ -67,8 +73,22 @@ export const PitfallsView: React.FC = () => {
           {/* Mode Switcher Tabs */}
           <div className="flex items-center gap-2 bg-purple-50 p-1.5 rounded-xl border border-purple-200">
             <button
+              onClick={() => setActiveTabMode('practice')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                activeTabMode === 'practice'
+                  ? 'bg-purple-900 text-white shadow-2xs'
+                  : 'text-purple-800 hover:bg-purple-200'
+              }`}
+            >
+              <Award className="w-3.5 h-3.5 text-amber-300" />
+              <span>5 Practice Questions</span>
+              <span className="px-1.5 py-0.2 bg-amber-400 text-purple-950 rounded-full text-[10px] font-black">
+                5 Qs
+              </span>
+            </button>
+            <button
               onClick={() => setActiveTabMode('guide')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 activeTabMode === 'guide'
                   ? 'bg-purple-900 text-white shadow-2xs'
                   : 'text-purple-800 hover:bg-purple-200'
@@ -76,20 +96,6 @@ export const PitfallsView: React.FC = () => {
             >
               <BookOpen className="w-3.5 h-3.5" />
               <span>16 Traps Guide</span>
-            </button>
-            <button
-              onClick={() => setActiveTabMode('practice')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeTabMode === 'practice'
-                  ? 'bg-purple-900 text-white shadow-2xs'
-                  : 'text-purple-800 hover:bg-purple-200'
-              }`}
-            >
-              <Award className="w-3.5 h-3.5" />
-              <span>5 Practice Questions</span>
-              <span className="px-1.5 py-0.2 bg-amber-400 text-purple-950 rounded-full text-[10px] font-black">
-                5 Qs
-              </span>
             </button>
           </div>
         </div>
@@ -399,6 +405,32 @@ export const PitfallsView: React.FC = () => {
                 {currentPracticeQ.questionText}
               </div>
             </div>
+
+            {/* Opt-in Guidance Hint (Pedagogical guidance only, no incorrect error pop-ups) */}
+            {currentPracticeQ.hint && (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => toggleHint(currentPracticeQ.id)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-950 text-xs font-bold transition-colors shadow-2xs"
+                >
+                  <Lightbulb className="w-3.5 h-3.5 text-amber-600" />
+                  <span>{revealedHints[currentPracticeQ.id] ? 'Hide Guidance Hint' : '💡 Need a Hint? Click for Guidance'}</span>
+                </button>
+
+                {revealedHints[currentPracticeQ.id] && (
+                  <div className="p-3.5 bg-amber-50/80 rounded-xl border-2 border-amber-300 text-xs text-amber-950 space-y-1.5 animate-in fade-in duration-150">
+                    <div className="font-bold text-amber-900 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
+                      <Lightbulb className="w-3.5 h-3.5 text-amber-700" />
+                      <span>Guidance & Strategic Direction (No Spoilers):</span>
+                    </div>
+                    <p className="leading-relaxed font-medium pl-5 text-amber-950">
+                      {currentPracticeQ.hint}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Interactive Options */}
             <div className="space-y-3">

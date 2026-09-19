@@ -320,6 +320,7 @@ export const PITFALL_PRACTICE_QUESTIONS: PitfallPracticeQuestion[] = [
         feedback: "Examiner Penalty! 1680/2000 is the proportion of dominant phenotypic individuals (p² + 2pq), not the single allele frequency (p)."
       }
     ],
+    hint: "Guidance: In Hardy-Weinberg calculations, consider which phenotype corresponds to a single, unambiguous genotype. Does the dominant phenotype represent one genotype or two?",
     modelWorking: [
       {
         stepTitle: "Step 1: Identify Homozygous Recessive Phenotype Frequency (q²)",
@@ -376,6 +377,7 @@ export const PITFALL_PRACTICE_QUESTIONS: PitfallPracticeQuestion[] = [
         feedback: "✓ Correct Step! Excellent! [3 marks] You used the complete term 2pq and converted the genotype frequency into an individual population count."
       }
     ],
+    hint: "Guidance: Think about how many ways a heterozygote can be formed from parental gametes (recall the binomial expansion). Also check the wording: does it ask for a proportion or an actual count of people?",
     modelWorking: [
       {
         stepTitle: "Step 1: State Heterozygous Carrier Frequency Formula",
@@ -426,6 +428,7 @@ export const PITFALL_PRACTICE_QUESTIONS: PitfallPracticeQuestion[] = [
         feedback: "Examiner Penalty! 550 alleles out of 500 total is mathematically impossible. A diploid population of N individuals has 2N total alleles in its gene pool."
       }
     ],
+    hint: "Guidance: Remember that organisms in this population are diploid, meaning each individual possesses two alleles. Heterozygotes carry one dominant allele and one recessive allele.",
     modelWorking: [
       {
         stepTitle: "Step 1: Calculate Total Gene Pool Alleles",
@@ -481,6 +484,7 @@ export const PITFALL_PRACTICE_QUESTIONS: PitfallPracticeQuestion[] = [
         feedback: "Examiner Penalty! Matriculation biology examiners require final allele and genotype frequencies expressed as decimals to 2 or 3 decimal places."
       }
     ],
+    hint: "Guidance: Check the exact square root of 0.0625 on your calculator before performing any rounding. In Matriculation exams, never round numbers during intermediate steps.",
     modelWorking: [
       {
         stepTitle: "Step 1: Calculate q² with Exact Decimal",
@@ -537,6 +541,7 @@ export const PITFALL_PRACTICE_QUESTIONS: PitfallPracticeQuestion[] = [
         feedback: "Examiner Penalty! Once selection ceases and random mating resumes in a large population, Hardy-Weinberg equilibrium is re-established in the following generation with the new allele frequencies."
       }
     ],
+    hint: "Guidance: When selection eliminates individuals before they breed, the alleles they carried are lost from the breeding pool. Can you apply the previous generation's frequencies directly, or do you need to recalculate from the survivors?",
     modelWorking: [
       {
         stepTitle: "Step 1: Analyze Survivor Genotypes",

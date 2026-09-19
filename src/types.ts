@@ -122,6 +122,7 @@ export interface PitfallPracticeQuestion {
     trapName?: string;
     feedback: string;
   }[];
+  hint?: string;
   modelWorking: {
     stepTitle: string;
     working: string;
