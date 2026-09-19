@@ -104,7 +104,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-6 pb-20 sm:pb-8">
         {activeTab === 'home' && (
           <HomeView onNavigate={handleTabChange} />
         )}
@@ -162,7 +162,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-[#2E1065] text-purple-200 border-t border-purple-900 mt-auto py-8 text-xs">
+      <footer className="bg-[#2E1065] text-purple-200 border-t border-purple-900 mt-auto py-8 mb-14 sm:mb-0 text-xs">
         <div className="max-w-7xl mx-auto px-4 space-y-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-purple-800/80 pb-6 text-center md:text-left">
             <div className="space-y-1">
@@ -177,12 +177,17 @@ export default function App() {
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-medium text-purple-200">
+            <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3.5 text-xs font-medium text-purple-200">
               <button onClick={() => handleTabChange('learn')} className="hover:text-white transition-colors">Curriculum</button>
               <button onClick={() => handleTabChange('toolbox')} className="hover:text-white transition-colors">Toolbox</button>
               <button onClick={() => handleTabChange('practice')} className="hover:text-white transition-colors">Solver</button>
+              <button onClick={() => handleTabChange('past-year')} className="hover:text-white transition-colors">Past Year</button>
+              <button onClick={() => handleTabChange('new-population')} className="hover:text-white transition-colors">New Pop</button>
               <button onClick={() => handleTabChange('pitfalls')} className="hover:text-white transition-colors">Pitfalls</button>
-              <button onClick={() => handleTabChange('ai-help')} className="hover:text-white transition-colors">AI Help</button>
+              <button onClick={() => handleTabChange('exit-ticket')} className="hover:text-amber-300 text-amber-300 font-semibold transition-colors">Exit Ticket</button>
+              <button onClick={() => handleTabChange('ai-help')} className="hover:text-emerald-300 text-emerald-300 font-semibold transition-colors">AI Help Desk</button>
+              <button onClick={() => handleTabChange('notes')} className="hover:text-cyan-300 text-cyan-200 transition-colors">Notes & Flashcards</button>
+              <button onClick={() => handleTabChange('progress')} className="hover:text-rose-300 text-rose-200 transition-colors">My Progress</button>
             </div>
           </div>
 

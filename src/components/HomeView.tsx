@@ -13,7 +13,10 @@ import {
   ArrowRight,
   ShieldCheck,
   BrainCircuit,
-  Lightbulb
+  Lightbulb,
+  Bot,
+  FileText,
+  BarChart3
 } from 'lucide-react';
 
 interface HomeViewProps {
@@ -213,6 +216,111 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
           <span>Open Masterclass</span>
           <ArrowRight className="w-4 h-4" />
         </button>
+      </section>
+
+      {/* Revision, AI & Student Progress Hub */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-purple-950 flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-amber-500" />
+            <span>Mastery, AI & Quick Review Tools</span>
+          </h2>
+          <span className="text-xs text-purple-600 font-medium">Accessible on all devices</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: Exit Ticket */}
+          <div 
+            onClick={() => onNavigate('exit-ticket')}
+            className="group cursor-pointer bg-white rounded-xl p-5 border-2 border-amber-200 hover:border-amber-400 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3"
+          >
+            <div className="space-y-2">
+              <div className="w-10 h-10 rounded-lg bg-amber-100 text-amber-900 flex items-center justify-center font-black group-hover:bg-amber-500 group-hover:text-purple-950 transition-colors">
+                <Target className="w-5 h-5" />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <h3 className="font-bold text-purple-950 text-base">Exit Ticket</h3>
+                <span className="text-[10px] uppercase font-black px-1.5 py-0.2 rounded-full bg-amber-400 text-purple-950">Game</span>
+              </div>
+              <p className="text-xs text-purple-900/80 leading-relaxed">
+                Test yourself with rapid-fire gamified exam scenarios. Instant scoring and feedback.
+              </p>
+            </div>
+            <div className="text-xs font-bold text-amber-700 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+              <span>Play Exit Ticket</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </div>
+          </div>
+
+          {/* Card 2: AI Help Desk */}
+          <div 
+            onClick={() => onNavigate('ai-help')}
+            className="group cursor-pointer bg-white rounded-xl p-5 border-2 border-emerald-200 hover:border-emerald-400 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3"
+          >
+            <div className="space-y-2">
+              <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-black group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                <Bot className="w-5 h-5" />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <h3 className="font-bold text-purple-950 text-base">AI Help Desk</h3>
+                <span className="text-[10px] uppercase font-black px-1.5 py-0.2 rounded-full bg-emerald-400 text-emerald-950">AI</span>
+              </div>
+              <p className="text-xs text-purple-900/80 leading-relaxed">
+                Stuck on a tricky tutorial question? Upload photo or type working for instant error checking.
+              </p>
+            </div>
+            <div className="text-xs font-bold text-emerald-700 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+              <span>Ask AI Tutor</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </div>
+          </div>
+
+          {/* Card 3: Notes & Flashcards */}
+          <div 
+            onClick={() => onNavigate('notes')}
+            className="group cursor-pointer bg-white rounded-xl p-5 border-2 border-cyan-200 hover:border-cyan-400 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3"
+          >
+            <div className="space-y-2">
+              <div className="w-10 h-10 rounded-lg bg-cyan-100 text-cyan-800 flex items-center justify-center font-black group-hover:bg-cyan-600 group-hover:text-white transition-colors">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <h3 className="font-bold text-purple-950 text-base">Notes & Flashcards</h3>
+                <span className="text-[10px] uppercase font-black px-1.5 py-0.2 rounded-full bg-cyan-300 text-cyan-950">Review</span>
+              </div>
+              <p className="text-xs text-purple-900/80 leading-relaxed">
+                Flip through interactive Leitner flashcards and structured revision summaries of Chapter 5.
+              </p>
+            </div>
+            <div className="text-xs font-bold text-cyan-700 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+              <span>Review Flashcards</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </div>
+          </div>
+
+          {/* Card 4: My Progress */}
+          <div 
+            onClick={() => onNavigate('progress')}
+            className="group cursor-pointer bg-white rounded-xl p-5 border-2 border-rose-200 hover:border-rose-400 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3"
+          >
+            <div className="space-y-2">
+              <div className="w-10 h-10 rounded-lg bg-rose-100 text-rose-800 flex items-center justify-center font-black group-hover:bg-rose-600 group-hover:text-white transition-colors">
+                <BarChart3 className="w-5 h-5" />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <h3 className="font-bold text-purple-950 text-base">My Progress</h3>
+                <span className="text-[10px] uppercase font-black px-1.5 py-0.2 rounded-full bg-rose-300 text-rose-950">Stats</span>
+              </div>
+              <p className="text-xs text-purple-900/80 leading-relaxed">
+                Track your PSPM readiness percentage, completed practice questions, and earned score marks.
+              </p>
+            </div>
+            <div className="text-xs font-bold text-rose-700 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+              <span>View Progress</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </div>
+          </div>
+        </div>
       </section>
     </div>
   );
