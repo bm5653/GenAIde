@@ -322,252 +322,242 @@ export const PITFALL_PRACTICE_QUESTIONS: PitfallPracticeQuestion[] = [
     ],
     modelWorking: [
       {
-        stepTitle: "Step 1: Recessive Genotype Frequency",
-        working: "Frequency of homozygous recessive genotype, q² = 320 / 2000 = 0.160",
+        stepTitle: "Step 1: Identify Homozygous Recessive Phenotype Frequency (q²)",
+        working: "q² = Number of white-horned goats / Total goats = 320 / 2000 = 0.160",
         marks: 1
       },
       {
-        stepTitle: "Step 2: Recessive Allele Frequency",
-        working: "Frequency of recessive allele, q = √0.160 = 0.400",
+        stepTitle: "Step 2: Calculate Recessive Allele Frequency (q)",
+        working: "q = √q² = √0.160 = 0.400",
         marks: 1
       },
       {
-        stepTitle: "Step 3: Dominant Allele Frequency",
-        working: "Since p + q = 1, frequency of dominant allele, p = 1 - 0.400 = 0.600",
+        stepTitle: "Step 3: Calculate Dominant Allele Frequency (p)",
+        working: "p = 1 - q = 1 - 0.400 = 0.600",
         marks: 1
       }
     ],
     examinerTips: [
-      "Rule of Thumb: ALWAYS look for the recessive trait first! Recessive phenotype is the only one whose genotype is unambiguously known (always homozygous recessive q²).",
-      "Writing 'p² = dominant number / total' is the #1 reason students score zero on Matriculation Population Genetics questions."
+      "Never start calculations using the dominant phenotype number because it masks two distinct genotypes (p² and 2pq).",
+      "Always start with the homozygous recessive phenotype because its genotype is unambiguous (q²)."
     ]
   },
   {
     id: 2,
-    title: "Immigration / Addition of Dominant Individuals Trap",
-    scenario: "A farmer maintains a herd of 2,000 cattle where the recessive white coat frequency is q² = 0.250 (q = 0.500, p = 0.500). The herd consists of 500 homozygous brown (p²), 1,000 heterozygous brown (2pq), and 500 white (q²). The farmer then buys and introduces 1,000 homozygous dominant brown cattle into the herd.",
-    questionText: "Calculate the new frequency of the dominant allele in the herd. Which method and calculation strictly adheres to examination requirements?",
+    title: "The Carrier Frequency Multiplier Trap (2pq vs pq)",
+    scenario: "In a human population of 10,000 people, the recessive allele frequency for cystic fibrosis is q = 0.020. The dominant normal allele frequency is p = 0.980.",
+    questionText: "Calculate the expected number of healthy carrier individuals (heterozygotes) in this population.",
     trapsCovered: [
-      { id: 7, name: "Applying Hardy-Weinberg Blindly After Population Change" },
-      { id: 8, name: "Forgetting That Diploid Organisms Carry 2 Alleles Per Gene" },
-      { id: 11, name: "Using Symbols When Population is NOT in Hardy-Weinberg" }
+      { id: 4, name: "Forgetting the '2' in 2pq" },
+      { id: 3, name: "Frequency vs Count Confusion" }
     ],
     options: [
       {
-        text: "Since brown cattle were added, new dominant frequency = (500 + 1000) / 3000 = 0.500 using Hardy-Weinberg p + q = 1",
+        text: "Number of carriers = p × q = 0.980 × 0.020 = 0.0196 individuals",
         isCorrect: false,
-        trapName: "Pitfall #7 & #8: Applying H-W Formulas and Omitting Diploid 2N Factor",
-        feedback: "Examiner Penalty! Adding 1,000 cattle is immigration/gene flow, which breaks Hardy-Weinberg equilibrium. Also, cattle are diploid; you cannot divide individual counts by total cows to get allele frequency."
+        trapName: "Pitfall #4: Forgetting the '2' in 2pq AND Pitfall #3: Confusing Frequency with Count",
+        feedback: "Double Examiner Penalty! First, carrier frequency is 2pq, not pq. Second, 0.0196 is a frequency (proportion), not a count of individuals. You must multiply by N = 10,000!"
       },
       {
-        text: "Total cattle = 2000 + 1000 = 3000. Total alleles in gene pool = 2 × 3000 = 6000. Dominant alleles = 2(1500) + 1000 = 4000. New dominant allele frequency = 4000 / 6000 = 0.667",
+        text: "Number of carriers = p × q × 10000 = 0.0196 × 10000 = 196 people",
+        isCorrect: false,
+        trapName: "Pitfall #4: Forgetting the '2' in 2pq",
+        feedback: "Examiner Penalty! You calculated pq × N instead of 2pq × N. Heterozygous genotype frequency has a coefficient of 2 because an individual can inherit 'A' from egg and 'a' from sperm, OR 'a' from egg and 'A' from sperm!"
+      },
+      {
+        text: "Number of carriers = 2pq = 2 × 0.980 × 0.020 = 0.0392",
+        isCorrect: false,
+        trapName: "Pitfall #3: Confusing Frequency with Count",
+        feedback: "Examiner Penalty! The question asked for the NUMBER of individuals, but you stopped at the frequency (0.0392 or 3.92%). You must multiply by total population (10,000) to get 392 people."
+      },
+      {
+        text: "Carrier frequency = 2pq = 2(0.980)(0.020) = 0.0392; Number of carriers = 0.0392 × 10,000 = 392 people",
         isCorrect: true,
-        feedback: "✓ Correct Step! Well done! [2 marks] Excellent! You recognized that immigration changes the gene pool, correctly counted alleles using the 2N denominator, and avoided using the symbol 'p'."
-      },
-      {
-        text: "Add 1000 to the original p = 0.500, so new p = (1000 + 500) / 2000 = 0.750",
-        isCorrect: false,
-        trapName: "Pitfall #7 & #12: Mixing Individual Numbers with Frequencies and Old Population Size",
-        feedback: "Examiner Penalty! You cannot add integer numbers of individuals directly into allele frequency fractions, and the population is no longer 2,000."
-      },
-      {
-        text: "Calculate dominant alleles as 1,500 and divide by 3,000 cattle to get 0.500",
-        isCorrect: false,
-        trapName: "Pitfall #8: Forgetting Diploid Organisms Carry 2 Alleles (2N)",
-        feedback: "Examiner Penalty! Homozygous dominant individuals carry TWO dominant alleles each (2 × 1500 = 3000), plus heterozygous contribute 1,000 alleles. Denominator must be total alleles (2 × 3000 = 6000)."
+        feedback: "✓ Correct Step! Excellent! [3 marks] You used the complete term 2pq and converted the genotype frequency into an individual population count."
       }
     ],
     modelWorking: [
       {
-        stepTitle: "Step 1: Total Population & Gene Pool Alleles",
-        working: "New total population = 2000 + 1000 = 3000 cattle. Total alleles in gene pool = 2 × 3000 = 6000 alleles.",
-        marks: 1
+        stepTitle: "Step 1: State Heterozygous Carrier Frequency Formula",
+        working: "Carrier frequency = 2pq = 2 × 0.980 × 0.020 = 0.0392",
+        marks: 2
       },
       {
-        stepTitle: "Step 2: Dominant Alleles Count",
-        working: "Number of new homozygous dominant = 500 + 1000 = 1500; Heterozygous = 1000. Total dominant alleles = 2(1500) + 1000 = 4000 alleles.",
-        marks: 1
-      },
-      {
-        stepTitle: "Step 3: New Dominant Allele Frequency",
-        working: "New dominant allele frequency = 4000 / 6000 = 0.667 (or 2/3) [Do not use symbol 'p']",
+        stepTitle: "Step 2: Convert Genotype Frequency to Number of Individuals",
+        working: "Number of carriers = 2pq × Total population (N) = 0.0392 × 10,000 = 392 individuals",
         marks: 1
       }
     ],
     examinerTips: [
-      "Rule 1 in Teacher Notes: DO NOT USE SYMBOLS (p, q) if the population does not follow Hardy-Weinberg equilibrium. Write out in full: 'New dominant allele frequency'.",
-      "Always remember the gene pool size for a diploid gene is 2 × Total Population (2N)."
+      "Remember that (p + q)² = p² + 2pq + q². Heterozygotes always appear twice in a Punnett square.",
+      "Check the units of the question: 'frequency' means a decimal between 0 and 1; 'number' or 'how many' means an integer count of individuals."
     ]
   },
   {
     id: 3,
-    title: "Carrier Calculation — 2pq vs Frequency vs Number of Individuals Trap",
-    scenario: "In a wild chicken population of 15,000 birds in Hardy-Weinberg equilibrium, 16% of the chickens have short legs, an autosomal recessive trait.",
-    questionText: "A question asks: 'How many wild chickens in this population are heterozygotes?' Which calculation and answer is awarded full marks?",
+    title: "Gene Pool Alleles vs Diploid Individuals Trap",
+    scenario: "In a diploid population of 500 fruit flies, red eyes (R) are dominant to sepia eyes (r). The count of alleles in the gene pool is being determined.",
+    questionText: "How many total alleles are present in the gene pool of this population, and if there are 100 homozygous dominant (RR), 250 heterozygous (Rr), and 150 homozygous recessive (rr) flies, what is the exact number of 'r' alleles?",
     trapsCovered: [
-      { id: 4, name: "Forgetting the Factor of 2 in 2pq" },
-      { id: 5, name: "Giving Frequency Instead of Number of Individuals" },
-      { id: 2, name: "Confusing q with q²" }
+      { id: 9, name: "Gene Pool Allele Count vs Individual Count (2N vs N)" }
     ],
     options: [
       {
-        text: "Recessive allele q = 0.16, dominant p = 0.84. Heterozygotes = 2(0.84)(0.16) × 15000 = 4032 chickens",
+        text: "Total alleles = 500; number of 'r' alleles = 150",
         isCorrect: false,
-        trapName: "Pitfall #2: Confusing q with q²",
-        feedback: "Examiner Penalty! 16% (0.16) is the genotype frequency (q²), NOT the allele frequency (q). You forgot that q = √0.16 = 0.40!"
+        trapName: "Pitfall #9: Gene Pool Allele Count vs Individual Count (2N vs N)",
+        feedback: "Examiner Penalty! Each fruit fly is diploid and carries TWO alleles. In 500 flies, total alleles = 500 × 2 = 1,000 alleles! Also, heterozygous flies carry one 'r' allele each."
       },
       {
-        text: "q² = 0.16 → q = 0.40, p = 0.60. Heterozygote frequency = 0.60 × 0.40 = 0.24, so answer is 0.24 chickens",
-        isCorrect: false,
-        trapName: "Pitfall #4 & #5: Forgot Factor of 2 in 2pq and Forgot to Multiply by Population",
-        feedback: "Examiner Penalty! Heterozygous frequency is 2pq = 2(0.6)(0.4) = 0.48 (you forgot the factor of 2!), and 0.48 is a frequency, not a number of chickens."
-      },
-      {
-        text: "q² = 0.16 → q = √0.16 = 0.40, p = 1 - 0.40 = 0.60. Frequency of heterozygotes 2pq = 2(0.60)(0.40) = 0.48. Number of heterozygotes = 0.48 × 15,000 = 7,200 chickens",
+        text: "Total alleles = 1,000; number of 'r' alleles = (2 × 150) + 250 = 550 alleles",
         isCorrect: true,
-        feedback: "✓ Correct Step! Well done! [3 marks] Perfect! You included the factor of 2 in 2pq and correctly multiplied the frequency by the total population (15,000) to find the number of individuals."
+        feedback: "✓ Correct Step! Spot on! [3 marks] Total gene pool = 2N = 1,000. 'r' alleles = (2 × 150 rr) + (1 × 250 Rr) = 300 + 250 = 550 alleles. Frequency q = 550/1000 = 0.550."
       },
       {
-        text: "q² = 0.16 → q = 0.40, p = 0.60. Final answer = 2pq = 2(0.60)(0.40) = 0.48",
+        text: "Total alleles = 1,000; number of 'r' alleles = 150 × 2 = 300 alleles",
         isCorrect: false,
-        trapName: "Pitfall #5: Giving Frequency Instead of Number of Individuals",
-        feedback: "Examiner Penalty! The question specifically asked 'HOW MANY wild chickens...', requiring an integer count (7,200 chickens), not just the decimal frequency 0.48."
+        trapName: "Overlooking Heterozygous Allele Contribution",
+        feedback: "Examiner Penalty! You counted the 300 'r' alleles from the 150 homozygous recessive flies, but completely ignored the 250 'r' alleles contributed by the 250 heterozygous flies!"
+      },
+      {
+        text: "Total alleles = 500; number of 'r' alleles = (2 × 150) + 250 = 550 alleles",
+        isCorrect: false,
+        trapName: "Diploid Population Size Error",
+        feedback: "Examiner Penalty! 550 alleles out of 500 total is mathematically impossible. A diploid population of N individuals has 2N total alleles in its gene pool."
       }
     ],
     modelWorking: [
       {
-        stepTitle: "Step 1: Recessive Genotype & Allele Frequencies",
-        working: "Frequency of homozygous recessive genotype, q² = 16/100 = 0.160; Frequency of recessive allele, q = √0.160 = 0.400",
+        stepTitle: "Step 1: Calculate Total Gene Pool Alleles",
+        working: "Total gene pool = 2 × N = 2 × 500 = 1,000 alleles",
         marks: 1
       },
       {
-        stepTitle: "Step 2: Dominant Allele & Heterozygous Genotype Frequency",
-        working: "Frequency of dominant allele, p = 1 - 0.400 = 0.600; Frequency of heterozygous genotype, 2pq = 2(0.600)(0.400) = 0.480",
+        stepTitle: "Step 2: Calculate Total Count of Recessive 'r' Alleles",
+        working: "Number of 'r' alleles = (2 × 150 rr) + (1 × 250 Rr) = 300 + 250 = 550 alleles",
         marks: 1
       },
       {
-        stepTitle: "Step 3: Number of Heterozygous Chickens",
-        working: "Number of heterozygotes in population = 2pq × 15,000 = 0.480 × 15,000 = 7,200 chickens",
+        stepTitle: "Step 3: Calculate Allele Frequency (q)",
+        working: "q = 550 / 1000 = 0.550",
         marks: 1
       }
     ],
     examinerTips: [
-      "Always reread the question prompt: 'Frequency' means a decimal between 0 and 1; 'How many' means an integer count of organisms.",
-      "The binomial expansion is (p + q)² = p² + 2pq + q². Heterozygotes have TWO combinations (Aa and aA), so never omit the factor of 2!"
+      "In allele counting problems, diploid organisms have 2 alleles per locus. Total gene pool = 2N.",
+      "Heterozygotes contribute 1 dominant allele and 1 recessive allele to the gene pool."
     ]
   },
   {
     id: 4,
-    title: "Selective Removal / Disease Culling Mortality Trap",
-    scenario: "A wild hamster population of 600 individuals consists of 96 homozygous dominant black hamsters (BB), 288 heterozygous black hamsters (Bb), and 216 homozygous recessive grey hamsters (bb). An outbreak of a viral epidemic suddenly kills ALL 216 grey hamsters.",
-    questionText: "What is the new frequency of the recessive allele (b) among the surviving hamsters?",
+    title: "Premature Rounding & Significant Figures Trap",
+    scenario: "In a survey of 800 cats, 50 have folded ears (recessive phenotype). A student computes q² = 50/800 = 0.0625.",
+    questionText: "Which rounding and calculation strategy complies with Matriculation examination conventions?",
     trapsCovered: [
-      { id: 7, name: "Assuming Recessive Allele is Completely Lost (q = 0)" },
-      { id: 12, name: "Forgetting to Calculate New Population Size After Removal" },
-      { id: 8, name: "Forgetting That Diploid Organisms Carry 2 Alleles Per Gene" }
+      { id: 10, name: "Decimal Places & Rounding Violations" }
     ],
     options: [
       {
-        text: "Since all 216 grey hamsters died, the recessive allele is completely eliminated from the population, so new recessive frequency = 0.000",
+        text: "Round q² immediately to 1 decimal place: q² ≈ 0.1, so q = √0.1 = 0.316, p = 0.684",
         isCorrect: false,
-        trapName: "Pitfall #7: Recessive Allele Extinction Fallacy",
-        feedback: "Examiner Penalty! Even though all homozygous recessive (bb) hamsters died, the recessive allele 'b' remains hidden in the 288 surviving heterozygous black hamsters (Bb)!"
+        trapName: "Pitfall #10: Premature Aggressive Rounding",
+        feedback: "Examiner Penalty! Rounding 0.0625 to 0.1 introduces a catastrophic error of over 60%! Keep full precision (0.0625) in your calculator."
       },
       {
-        text: "Divide surviving recessive alleles by original population size: 288 / (2 × 600) = 288 / 1200 = 0.240",
-        isCorrect: false,
-        trapName: "Pitfall #12: Forgetting to Calculate New Population Size After Removal",
-        feedback: "Examiner Penalty! The dead hamsters are no longer in the population! The new population is 600 - 216 = 384, so total alleles is 2 × 384 = 768, NOT 1,200."
-      },
-      {
-        text: "Surviving hamsters = 600 - 216 = 384. Total gene pool alleles = 2 × 384 = 768. Recessive alleles in surviving heterozygotes = 288. New recessive allele frequency = 288 / 768 = 0.375",
+        text: "Keep exact intermediate value: q² = 0.0625, then calculate q = √0.0625 = 0.250, then p = 1 - 0.250 = 0.750",
         isCorrect: true,
-        feedback: "✓ Correct Step! Well done! [3 marks] Masterful! You updated the denominator to 384 survivors (768 total alleles) and recognized that surviving heterozygotes carry 288 recessive alleles."
+        feedback: "✓ Correct Step! Perfect! [3 marks] Exact intermediate calculation produces accurate allele frequencies without rounding drift."
       },
       {
-        text: "Surviving hamsters = 384. Divide heterozygous count by survivor count: 288 / 384 = 0.750",
+        text: "Round q to 0.3, then p = 1 - 0.3 = 0.7, so carrier frequency = 2 × 0.7 × 0.3 = 0.42",
         isCorrect: false,
-        trapName: "Pitfall #8: Confusing Genotype Fraction with Allele Frequency (Omitted 2N)",
-        feedback: "Examiner Penalty! 288/384 is the proportion of heterozygous individuals, not the allele frequency. Each diploid hamster carries 2 alleles, so the denominator is 2 × 384 = 768."
+        trapName: "Premature Rounding of Allele Frequencies",
+        feedback: "Examiner Penalty! √0.0625 is exactly 0.25. Forcing it to 0.3 corrupts all subsequent genotype calculations."
+      },
+      {
+        text: "Leave answers as unsimplified fractions: q = √(50/800)",
+        isCorrect: false,
+        trapName: "Leaving Values in Non-Decimal Exam Format",
+        feedback: "Examiner Penalty! Matriculation biology examiners require final allele and genotype frequencies expressed as decimals to 2 or 3 decimal places."
       }
     ],
     modelWorking: [
       {
-        stepTitle: "Step 1: Surviving Population & New Gene Pool Size",
-        working: "Surviving population = 600 - 216 = 384 hamsters. Total alleles in new gene pool = 2 × 384 = 768 alleles.",
+        stepTitle: "Step 1: Calculate q² with Exact Decimal",
+        working: "q² = 50 / 800 = 0.0625",
         marks: 1
       },
       {
-        stepTitle: "Step 2: Remaining Recessive Alleles Count",
-        working: "Surviving genotypes: 96 BB (contribute 0 'b' alleles), 288 Bb (contribute 288 × 1 = 288 'b' alleles). Total 'b' alleles = 288.",
+        stepTitle: "Step 2: Calculate q using Exact Square Root",
+        working: "q = √0.0625 = 0.250 (3 d.p.)",
         marks: 1
       },
       {
-        stepTitle: "Step 3: New Recessive Allele Frequency",
-        working: "New frequency of recessive allele = 288 / 768 = 0.375 [Do not use symbol 'q']",
+        stepTitle: "Step 3: Calculate Dominant Allele Frequency (p)",
+        working: "p = 1 - q = 1 - 0.250 = 0.750 (3 d.p.)",
         marks: 1
       }
     ],
     examinerTips: [
-      "Whenever mortality, disease, or culling occurs: Step 1 MUST be calculating the NEW population size: New N = Original N - Dead.",
-      "Recessive alleles are never eliminated in one generation if heterozygotes survive; they remain protected inside diploid carriers."
+      "Do NOT round during intermediate steps. Store intermediate values in your calculator memory.",
+      "Present final frequencies to 2 or 3 decimal places (e.g. 0.250 and 0.750)."
     ]
   },
   {
     id: 5,
-    title: "Decimal Places Precision & Percentage Format Trap",
-    scenario: "One in 3,600 newborns in a population inherits an autosomal recessive metabolic disorder. The examination rubric states explicitly: '(All calculations must be in 4 decimal places. State final carrier rate as a percentage)'.",
-    questionText: "Which student solution strictly satisfies the official Matriculation examination rubric?",
+    title: "Post-Selection Generation Trap",
+    scenario: "A population of beetles has allele frequencies p = 0.600 and q = 0.400. A pesticide spray kills 100% of homozygous recessive beetles (rr) before they reproduce. The surviving beetles breed randomly with no further pesticide exposure.",
+    questionText: "Can Hardy-Weinberg equations be immediately applied to the surviving generation before recalculating new allele frequencies?",
     trapsCovered: [
-      { id: 9, name: "Violating the Decimal-Place Requirements" },
-      { id: 6, name: "Giving Percentage When Asked for Frequency (or vice-versa)" },
-      { id: 14, name: "Premature Rounding During Intermediate Steps" }
+      { id: 14, name: "Lethal Alleles / Post-Selection Recalculation Trap" },
+      { id: 16, name: "Missing the Explicit Hardy-Weinberg Assumption" }
     ],
     options: [
       {
-        text: "q = √0.0003 = 0.02, p = 0.98, 2pq = 2(0.98)(0.02) = 0.0392 = 3.92%",
+        text: "Yes, because the remaining beetles are in equilibrium, so q remains 0.400 in the next generation",
         isCorrect: false,
-        trapName: "Pitfall #9 & #14: Premature Rounding to 2 Decimal Places Instead of Required 4",
-        feedback: "Examiner Penalty! Rounding q prematurely to 0.02 (instead of 0.0173) creates a massive 15% error in the final calculation. The rubric explicitly demanded 4 decimal places throughout."
+        trapName: "Pitfall #14: Ignoring Natural Selection Impact on Allele Frequencies",
+        feedback: "Examiner Penalty! Killing all 'rr' individuals eliminates many 'r' alleles from the gene pool! Allele frequency q DROPS significantly, so you cannot assume q remains 0.400!"
       },
       {
-        text: "q² = 1/3600 = 0.0003. Recessive allele q = √0.0003 = 0.0173. Dominant allele p = 1 - 0.0173 = 0.9827. Carrier frequency 2pq = 2(0.9827)(0.0173) = 0.0340. Percentage of carriers = 0.0340 × 100% = 3.40%",
+        text: "No. You must first count the surviving genotypes (p² and 2pq), calculate NEW allele frequencies p' and q' from the surviving gene pool, and state the assumption that subsequent breeding satisfies Hardy-Weinberg conditions.",
         isCorrect: true,
-        feedback: "✓ Correct Step! Well done! [3 marks] Flawless! You adhered to the 4 decimal places requirement at every step, avoided premature rounding, and formatted the final answer with a percentage sign (%)."
+        feedback: "✓ Correct Step! Outstanding exam technique! [4 marks] Severe selection breaks equilibrium. You must recalculate p' and q' based on surviving individuals before predicting subsequent generations."
       },
       {
-        text: "q² = 1/3600 = 0.0003, q = 0.0173, p = 0.9827, 2pq = 0.0340",
+        text: "Yes, just set q = 0 because all recessive beetles died",
         isCorrect: false,
-        trapName: "Pitfall #6: Giving Frequency Instead of Percentage",
-        feedback: "Examiner Penalty! The question rubric stated: 'State final carrier rate as a percentage'. Leaving it as 0.0340 loses the final answer mark."
+        trapName: "Overlooking Recessive Alleles Hidden in Heterozygotes",
+        feedback: "Examiner Penalty! Heterozygous beetles (2pq) carry the recessive allele and survived the pesticide. The 'r' allele is NOT extinct (q is not 0)!"
       },
       {
-        text: "Directly calculate carriers: 2 × (1/3600) × 100% = 0.0556%",
+        text: "No, Hardy-Weinberg can never again be applied to this population under any circumstance",
         isCorrect: false,
-        trapName: "Pitfall #2 & #15: Multiplied Genotype Frequency Directly Without Finding Alleles",
-        feedback: "Examiner Penalty! 1/3600 is q². You cannot plug q² into 2pq without first finding allele frequencies p and q."
+        trapName: "Assuming Evolution is Permanent Disequilibrium",
+        feedback: "Examiner Penalty! Once selection ceases and random mating resumes in a large population, Hardy-Weinberg equilibrium is re-established in the following generation with the new allele frequencies."
       }
     ],
     modelWorking: [
       {
-        stepTitle: "Step 1: Homozygous Recessive Genotype Frequency (4 d.p.)",
-        working: "Frequency of homozygous recessive genotype, q² = 1 / 3600 = 0.0003",
+        stepTitle: "Step 1: Analyze Survivor Genotypes",
+        working: "Survivors consist of RR (p² = 0.36) and Rr (2pq = 0.48). Total survivor frequency = 0.36 + 0.48 = 0.84.",
         marks: 1
       },
       {
-        stepTitle: "Step 2: Allele Frequencies q and p (4 d.p.)",
-        working: "Frequency of recessive allele, q = √0.0003 = 0.0173; Frequency of dominant allele, p = 1 - 0.0173 = 0.9827",
-        marks: 1
+        stepTitle: "Step 2: Recalculate New Allele Frequencies in Gene Pool",
+        working: "New q' = (1/2 × 0.48) / 0.84 = 0.24 / 0.84 ≈ 0.286; New p' = 1 - 0.286 = 0.714",
+        marks: 2
       },
       {
-        stepTitle: "Step 3: Heterozygous Carrier Frequency & Percentage",
-        working: "Frequency of heterozygous genotype, 2pq = 2(0.9827)(0.0173) = 0.0340; Percentage of carriers = 0.0340 × 100% = 3.40% (or 3.4%)",
+        stepTitle: "Step 3: State Explicit Equilibrium Assumption",
+        working: "Assume random mating and no further selection occurs for subsequent generations.",
         marks: 1
       }
     ],
     examinerTips: [
-      "When a rubric explicitly specifies decimal places (e.g. 4 d.p.), ANY premature rounding in intermediate steps (like rounding q to 0.02) causes immediate forfeiture of accuracy marks.",
-      "Always check if the answer should end with '%' (percentage) or as a decimal between 0 and 1 (frequency)."
+      "Natural selection removes alleles from the gene pool. You must always recalculate allele frequencies using the surviving population.",
+      "Recessive lethal alleles persist in populations because they are protected in heterozygous carriers."
     ]
   }
 ];
+
