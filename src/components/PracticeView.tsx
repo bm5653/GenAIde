@@ -839,7 +839,7 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
               <span className="text-base leading-none mt-0.5">📋</span>
               <div className="space-y-0.5">
                 <span className="font-extrabold text-amber-950 block uppercase tracking-wide text-[11px]">
-                  Matriculation Marking Standard (SB025 Requirement)
+                  Matriculation Marking Standard (SB015 Requirement)
                 </span>
                 <p className="text-[12px] text-amber-900 leading-snug">
                   All symbols <strong>must be written with their description first</strong> in the step calculation (for example, <code className="bg-amber-100/90 px-1.5 py-0.5 rounded font-mono font-bold text-amber-950">Frequency of homozygous recessive genotype, q² = [recessive count] / [total N] = [value]</code>). Use the template button or quick term buttons below to insert the full description!

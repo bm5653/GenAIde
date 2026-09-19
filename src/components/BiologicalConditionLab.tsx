@@ -1519,7 +1519,7 @@ export const BiologicalConditionLab: React.FC = () => {
               THINK FIRST. CALCULATE SECOND. USE AI WISELY.
             </span>
             <span className="text-purple-300 font-medium">
-              Malaysian Matriculation Biology (SB025) • Topic 5: Population Genetics
+              Malaysian Matriculation Biology (SB015) • Topic 5: Population Genetics
             </span>
           </div>
         </div>
