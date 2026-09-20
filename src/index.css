@@ -4,5 +4,40 @@
   html {
     scroll-behavior: smooth;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-text-size-adjust: 100%;
   }
+
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Ensure touch targets meet accessibility standards (at least 44px min height on touch devices) */
+  @media (pointer: coarse) {
+    button, 
+    input[type="button"], 
+    input[type="submit"], 
+    [role="button"],
+    select {
+      min-height: 44px;
+    }
+  }
+}
+
+/* Custom friendly scrollbars for horizontal overflows on mobile */
+.scrollbar-thin::-webkit-scrollbar {
+  height: 5px;
+  width: 5px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #f1f0f7;
+  border-radius: 9999px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #c4b5fd;
+  border-radius: 9999px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #8b5cf6;
 }

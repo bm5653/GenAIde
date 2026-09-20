@@ -6,7 +6,6 @@ import {
   TableProperties, 
   PenTool, 
   GraduationCap, 
-  Users, 
   AlertTriangle, 
   Target, 
   Bot, 
@@ -43,7 +42,6 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
     { id: 'toolbox', label: 'PopGen Toolbox', shortLabel: 'Toolbox', icon: TableProperties, category: 'core' },
     { id: 'practice', label: 'Step Solver', shortLabel: 'Solver', icon: PenTool, category: 'core' },
     { id: 'past-year', label: 'Tutorial & PSPM', shortLabel: 'Tutorial/PSPM', icon: GraduationCap, category: 'core' },
-    { id: 'new-population', label: 'New Population', shortLabel: 'New Pop', icon: Users, badge: 'Key', badgeClass: 'bg-purple-300 text-purple-950 font-bold', category: 'core' },
   ];
 
   // Mastery, AI & Review tabs (Row 2) - explicitly featuring the user's requested tabs
@@ -142,42 +140,66 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
 
         {/* ========================================================= */}
         {/* MOBILE RESPONSIVE NAVIGATION (< 640px)                    */}
-        {/* Shows all 11 tabs clearly, with quick toggle for height   */}
+        {/* Generous touch targets, horizontal quick-scroller & grid   */}
         {/* ========================================================= */}
-        <div className="sm:hidden flex flex-col gap-2">
-          {/* Active Tab Bar with Toggle */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-purple-300 font-semibold flex items-center gap-1">
+        <div className="sm:hidden flex flex-col gap-2.5">
+          {/* Active Tab Bar with Drawer Toggle */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+              <span className="text-[11px] text-purple-300 font-semibold shrink-0 flex items-center gap-1">
                 <Compass className="w-3.5 h-3.5 text-purple-400" />
                 <span>Active:</span>
               </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-purple-700 text-white text-xs font-bold shadow-xs">
-                {activeItem?.icon && <activeItem.icon className="w-3.5 h-3.5 text-amber-300" />}
-                <span>{activeItem?.label}</span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-700 text-white text-xs font-bold shadow-xs truncate">
+                {activeItem?.icon && <activeItem.icon className="w-3.5 h-3.5 text-amber-300 shrink-0" />}
+                <span className="truncate">{activeItem?.label}</span>
               </span>
             </div>
 
             <button
               onClick={() => setMobileExpanded(!mobileExpanded)}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-purple-900/90 text-purple-200 hover:text-white text-xs font-medium border border-purple-700 active:bg-purple-800"
-              aria-label="Toggle all navigation tabs"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-900/90 text-purple-100 hover:text-white text-xs font-bold border border-purple-600 active:bg-purple-800 shrink-0 cursor-pointer shadow-2xs min-h-[40px]"
+              aria-label="Toggle all navigation tabs menu"
             >
-              <span>{mobileExpanded ? 'Collapse' : 'All 11 Tabs'}</span>
-              {mobileExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              <span>{mobileExpanded ? 'Close Menu' : 'All 11 Tabs'}</span>
+              {mobileExpanded ? <ChevronUp className="w-4 h-4 text-purple-300" /> : <ChevronDown className="w-4 h-4 text-purple-300" />}
             </button>
           </div>
 
-          {/* All 11 Tabs Mobile Grid (Guaranteed visibility for all devices) */}
+          {/* Quick horizontal tab pill scrollbar for fast 1-tap switching without opening drawer */}
+          {!mobileExpanded && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+              {allNavItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleSelect(item.id)}
+                    className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors min-h-[38px] cursor-pointer ${
+                      isActive
+                        ? 'bg-purple-600 text-white font-bold shadow-xs ring-1 ring-purple-300'
+                        : 'bg-purple-900/70 text-purple-200 hover:bg-purple-800 hover:text-white'
+                    }`}
+                  >
+                    <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-amber-300' : 'text-purple-300'}`} />
+                    <span>{item.shortLabel || item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* All 11 Tabs Mobile Drawer Grid (Generous 48px touch targets for mobile thumbs) */}
           {mobileExpanded && (
-            <div className="bg-[#240b54] p-2 rounded-xl border border-purple-700/80 space-y-2 animate-in fade-in duration-150">
-              {/* Category 1: Core */}
-              <div className="space-y-1">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-purple-300 flex items-center gap-1">
-                  <BookOpen className="w-3 h-3 text-purple-400" />
-                  <span>Core Learning & Practice</span>
+            <div className="bg-[#240b54] p-3 rounded-xl border border-purple-700/80 space-y-3 animate-in fade-in duration-150 shadow-xl">
+              {/* Category 1: Core Learning & Practice */}
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-extrabold uppercase tracking-wider text-purple-200 flex items-center gap-1.5 pb-0.5">
+                  <BookOpen className="w-3.5 h-3.5 text-purple-400" />
+                  <span>Core Learning &amp; Practice</span>
                 </div>
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {coreNavItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = activeTab === item.id;
@@ -185,17 +207,22 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
                       <button
                         key={item.id}
                         id={`mobile-core-nav-${item.id}`}
-                        onClick={() => handleSelect(item.id)}
-                        className={`flex items-center gap-1.5 p-2 rounded-lg text-xs font-medium text-left transition-colors ${
+                        onClick={() => {
+                          handleSelect(item.id);
+                          setMobileExpanded(false);
+                        }}
+                        className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-medium text-left transition-colors min-h-[46px] cursor-pointer ${
                           isActive
-                            ? 'bg-purple-600 text-white font-bold shadow-xs'
-                            : 'bg-purple-900/60 text-purple-200 hover:bg-purple-800/80 hover:text-white'
+                            ? 'bg-purple-600 text-white font-bold shadow-xs ring-1 ring-purple-300'
+                            : 'bg-purple-900/70 text-purple-100 hover:bg-purple-800 hover:text-white'
                         }`}
                       >
-                        <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-white' : 'text-purple-300'}`} />
-                        <span className="truncate">{item.shortLabel || item.label}</span>
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${isActive ? 'bg-purple-700' : 'bg-purple-950/80'}`}>
+                          <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-purple-300'}`} />
+                        </div>
+                        <span className="font-semibold text-xs flex-1">{item.label}</span>
                         {item.badge && (
-                          <span className="ml-auto text-[8px] uppercase px-1 py-0.2 rounded bg-purple-300 text-purple-950 font-bold shrink-0">
+                          <span className="ml-auto text-[9px] uppercase px-1.5 py-0.5 rounded bg-purple-300 text-purple-950 font-bold shrink-0">
                             {item.badge}
                           </span>
                         )}
@@ -205,13 +232,13 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
                 </div>
               </div>
 
-              {/* Category 2: Mastery & Tools (Exit Ticket, AI Help Desk, Notes & Flashcards, My Progress) */}
-              <div className="space-y-1 pt-1.5 border-t border-purple-800/70">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-amber-300" />
-                  <span>Mastery, AI & Review Tools</span>
+              {/* Category 2: Mastery, AI & Review Tools */}
+              <div className="space-y-1.5 pt-2 border-t border-purple-800/70">
+                <div className="text-[11px] font-extrabold uppercase tracking-wider text-amber-300 flex items-center gap-1.5 pb-0.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Mastery, AI &amp; Review Tools</span>
                 </div>
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {toolsNavItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = activeTab === item.id;
@@ -219,17 +246,22 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
                       <button
                         key={item.id}
                         id={`mobile-tool-nav-${item.id}`}
-                        onClick={() => handleSelect(item.id)}
-                        className={`flex items-center gap-1.5 p-2 rounded-lg text-xs font-medium text-left transition-colors ${
+                        onClick={() => {
+                          handleSelect(item.id);
+                          setMobileExpanded(false);
+                        }}
+                        className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-medium text-left transition-colors min-h-[46px] cursor-pointer ${
                           isActive
-                            ? 'bg-purple-600 text-white font-bold shadow-xs'
-                            : 'bg-purple-900/60 text-purple-200 hover:bg-purple-800/80 hover:text-white'
+                            ? 'bg-purple-600 text-white font-bold shadow-xs ring-1 ring-purple-300'
+                            : 'bg-purple-900/70 text-purple-100 hover:bg-purple-800 hover:text-white'
                         }`}
                       >
-                        <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-white' : 'text-purple-300'}`} />
-                        <span className="truncate">{item.shortLabel || item.label}</span>
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${isActive ? 'bg-purple-700' : 'bg-purple-950/80'}`}>
+                          <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-purple-300'}`} />
+                        </div>
+                        <span className="font-semibold text-xs flex-1">{item.label}</span>
                         {item.badge && (
-                          <span className={`ml-auto text-[8px] uppercase px-1 py-0.2 rounded font-bold shrink-0 ${item.badgeClass || 'bg-amber-400 text-purple-950'}`}>
+                          <span className={`ml-auto text-[9px] uppercase px-1.5 py-0.5 rounded font-bold shrink-0 ${item.badgeClass || 'bg-amber-400 text-purple-950'}`}>
                             {item.badge}
                           </span>
                         )}

@@ -22,13 +22,13 @@ interface ExitQuestion {
 const EXIT_QUESTIONS: ExitQuestion[] = [
   {
     id: 1,
-    scenario: "In a pond of 200 fish, 50 fish died from a fatal parasite. Among the remaining survivors, 30 fish display a recessive albino trait.",
-    question: "What is the new frequency of the homozygous recessive genotype (q²) in the survivor population?",
+    scenario: "In a population of rabbits in Hardy-Weinberg equilibrium, 9% of the rabbits have white fur (recessive phenotype, bb).",
+    question: "What is the expected frequency of homozygous dominant rabbits (BB)?",
     options: [
-      { text: "30 / 200 = 0.15", isCorrect: false, explanation: "Wrong! 50 fish died, so the new survivor population is 200 - 50 = 150, not 200!" },
-      { text: "30 / 150 = 0.20", isCorrect: true, explanation: "Correct! The new population size is 150 survivors. q² = 30 / 150 = 0.20." },
-      { text: "√0.15 = 0.387", isCorrect: false, explanation: "This takes the square root of the wrong population count." },
-      { text: "120 / 150 = 0.80", isCorrect: false, explanation: "0.80 is the dominant phenotype frequency, not q²." }
+      { text: "q² = 0.09 → q = 0.30 → p = 0.70 → p² = (0.70)² = 0.49", isCorrect: true, explanation: "Correct! q = √0.09 = 0.30. Dominant allele p = 1 - 0.30 = 0.70. Therefore p² = (0.70)² = 0.49." },
+      { text: "1 - 0.09 = 0.91", isCorrect: false, explanation: "0.91 is the combined frequency of dominant phenotypes (p² + 2pq), not just homozygous dominant (p²)." },
+      { text: "(0.09)² = 0.0081", isCorrect: false, explanation: "0.09 is already q², you do not square it again." },
+      { text: "2 × 0.70 × 0.30 = 0.42", isCorrect: false, explanation: "0.42 is 2pq (heterozygous carriers), not homozygous dominant (p²)." }
     ]
   },
   {
@@ -66,13 +66,13 @@ const EXIT_QUESTIONS: ExitQuestion[] = [
   },
   {
     id: 5,
-    scenario: "After a severe drought, 1000 brown goats are introduced into an existing herd of 2000 goats (500 white, 1500 brown).",
-    question: "Why are you STRICTLY FORBIDDEN from using the symbols 'p' and 'q' directly to solve the combined herd?",
+    scenario: "An exam problem asks: 'In a human population of 25,000, calculate the allele frequencies to 5 decimal places.' A student writes: 'p = 0.98, q = 0.02'.",
+    question: "Why would this student lose marks in the Matriculation biology exam?",
     options: [
-      { text: "Because goats are haploid.", isCorrect: false, explanation: "Goats are diploid organisms." },
-      { text: "Because immigration violates Hardy-Weinberg equilibrium; you must use the verbal Gene Pool Allele-Counting Method.", isCorrect: true, explanation: "Rule 1 of Summary Notes: Do not use p and q when population violates H-W equilibrium. Write full verbal terms!" },
-      { text: "Because p and q can only be used for plants.", isCorrect: false, explanation: "H-W applies to any sexual diploid population in equilibrium." },
-      { text: "Because brown fur is co-dominant.", isCorrect: false, explanation: "Brown fur is completely dominant." }
+      { text: "Because allele frequencies must always sum to 100%.", isCorrect: false, explanation: "Allele frequencies sum to 1.0 (or 100%), but that is not why marks were deducted." },
+      { text: "Because the question explicitly specified 5 decimal places (e.g., p = 0.98125), and ignoring stated precision instructions loses marks.", isCorrect: true, explanation: "Correct! Always obey question-specific decimal instructions (e.g. 5 decimal places for large genetic disease surveys)!" },
+      { text: "Because p cannot exceed 0.90 in humans.", isCorrect: false, explanation: "Allele frequencies can take any value between 0 and 1." },
+      { text: "Because Hardy-Weinberg never applies to human populations.", isCorrect: false, explanation: "Hardy-Weinberg principles frequently apply to autosomal traits in human populations." }
     ]
   }
 ];
@@ -258,7 +258,7 @@ export const ExitTicketView: React.FC = () => {
               </div>
             ) : (
               <div>
-                📚 <strong>Recommended Action:</strong> Revisit the <em>New Population Masterclass</em> and the <em>POPGEN Table</em> to master the 4-step sequence before your next exam.
+                📚 <strong>Recommended Action:</strong> Revisit the <em>POP GEN 4-Step Strategy</em> and the <em>PopGen Pitfalls</em> to master the calculation sequence before your next exam.
               </div>
             )}
           </div>

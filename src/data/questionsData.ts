@@ -1,5 +1,5 @@
 import { QuestionData } from '../types';
-import { miceCoatImg, mothVarietyImg } from '../assets/images';
+import { miceCoatImg } from '../assets/images';
 
 export const QUESTIONS_DATA: QuestionData[] = [
   {
@@ -218,364 +218,19 @@ export const QUESTIONS_DATA: QuestionData[] = [
   {
     id: "q3",
     number: "Question 3",
-    title: "Insect Population with Fair Variety Elimination",
-    source: "Structured Question 3",
-    category: "removal",
-    difficulty: "Advanced",
-    questionText: "A species of insects may exist as a dark variety or a fair variety. The dark trait is dominant. In a population of 5000 insects, there are 950 dark insects. The population fulfils all Hardy-Weinberg assumptions.\n\n(a) Calculate the frequency of the 'fair' allele. [3 marks]\n(b) Calculate the frequency of the 'dark' allele. [2 marks]\n(c) Calculate the number of heterozygous insects in the population. [2 marks]\n(d) If all the fair insects were killed and the rest were allowed to mate randomly, calculate the new frequency of dominant and recessive alleles. [4 marks]",
-    targetConcept: "Hardy-Weinberg calculation followed by non-equilibrium selective elimination and gene pool allele counting",
-    isHardyWeinberg: false,
-    whyHwOrNonHw: "Part (a)-(c) uses Hardy-Weinberg. Part (d) involves selective elimination of all fair insects, breaking equilibrium and requiring the Gene Pool allele-counting method!",
-    detectorOptions: [
-      { label: "Part (a)-(c) Hardy-Weinberg; Part (d) Population Change via Gene Pool Allele Counting", isCorrect: true, feedback: "Exactly right! When all fair insects are killed, Hardy-Weinberg cannot be used directly for the new frequencies." },
-      { label: "Apply Hardy-Weinberg equation p² + 2pq + q² = 1 to part (d)", isCorrect: false, feedback: "DANGER! All fair insects were killed. This is natural selection / selective elimination. You must use gene pool allele counting!" },
-      { label: "Calculate gene pool tallness", isCorrect: false, feedback: "This question concerns insect wing color varieties." }
-    ],
-    totalMarks: 11,
-    imageUrl: mothVarietyImg,
-    imageCaption: "Peppered moth (Biston betularia) morphs on tree bark: Fair typica speckled variety (recessive) vs Dark melanic variety (dominant).",
-    steps: [
-      {
-        stepNumber: 1,
-        title: "Find Number of Fair Variety Insects",
-        instruction: "Given total = 5000 and dark = 950, find number of fair (recessive) insects.",
-        expectedConcept: "Number of fair variety insects = 5000 - 950",
-        acceptedAnswers: ["4050", "4,050"],
-        tolerance: 0,
-        hint1: "Fair insects = Total insects - Dark insects.",
-        hint2: "5000 - 950 = 4050",
-        hint3: "4050",
-        explanation: "Number of fair variety insects = 5000 - 950 = 4050 [1 mark]",
-        marks: 1
-      },
-      {
-        stepNumber: 2,
-        title: "Calculate q² for Fair Insects",
-        instruction: "Calculate q² = 4050 / 5000.",
-        expectedConcept: "Frequency of homozygous recessive genotype, q²",
-        expectedSymbol: "q²",
-        acceptedAnswers: ["0.81", "0.810", ".81"],
-        tolerance: 0.005,
-        hint1: "4050 ÷ 5000",
-        hint2: "0.81",
-        hint3: "q² = 0.810",
-        explanation: "Frequency of homozygous recessive genotype, q² = 4050/5000 = 0.810 [1 mark]",
-        marks: 1
-      },
-      {
-        stepNumber: 3,
-        title: "Calculate Frequency of Fair Allele (q)",
-        instruction: "Calculate q = √q².",
-        expectedConcept: "Frequency of recessive allele / fair allele, q",
-        expectedSymbol: "q",
-        acceptedAnswers: ["0.9", "0.90", "0.900", ".9"],
-        tolerance: 0.005,
-        hint1: "Take square root of 0.81.",
-        hint2: "√0.81 = 0.9",
-        hint3: "q = 0.900",
-        explanation: "Frequency of recessive allele / fair allele, q = √0.81 = 0.900 [1 mark]",
-        marks: 1
-      },
-      {
-        stepNumber: 4,
-        title: "Calculate Frequency of Dark Allele (p)",
-        instruction: "Since p + q = 1, find p.",
-        expectedConcept: "Frequency of dominant allele / dark allele, p = 1 - q",
-        expectedSymbol: "p",
-        acceptedAnswers: ["0.1", "0.10", "0.100", ".1"],
-        tolerance: 0.005,
-        hint1: "p = 1 - 0.9",
-        hint2: "1 - 0.9 = 0.1",
-        hint3: "p = 0.100",
-        explanation: "Since p + q = 1, frequency of dominant allele p = 1 - 0.9 = 0.100 [1 mark]",
-        marks: 1
-      },
-      {
-        stepNumber: 5,
-        title: "Calculate Number of Heterozygous Insects",
-        instruction: "Calculate number of heterozygous insects = 2pq × 5000.",
-        expectedConcept: "2pq × 5000",
-        acceptedAnswers: ["900", "900 insects"],
-        tolerance: 0,
-        hint1: "2pq = 2(0.1)(0.9) = 0.18.",
-        hint2: "0.18 × 5000 = 900.",
-        hint3: "900 insects",
-        explanation: "2pq = 2(0.1)(0.9) = 0.18. Number of heterozygous insects = 0.18 × 5000 = 900 insects [2 marks]",
-        marks: 2
-      },
-      {
-        stepNumber: 6,
-        title: "Population Change: Survivors Breakdown",
-        instruction: "All 4050 fair insects die. The survivors are the 950 dark insects (900 heterozygous + ? homozygous dominant). Find homozygous dominant count.",
-        expectedConcept: "Number of homozygous dominant genotype insects = 950 - 900",
-        acceptedAnswers: ["50", "50 insects"],
-        tolerance: 0,
-        hint1: "Total dark insects = 950. 900 are heterozygous.",
-        hint2: "Homozygous dominant = 950 - 900 = 50.",
-        hint3: "50",
-        explanation: "Number of homozygous dominant insects = 950 - 900 = 50 [1 mark]. Total new population = 950 insects.",
-        marks: 1
-      },
-      {
-        stepNumber: 7,
-        title: "Gene Pool Allele Counting: New Dominant Allele Frequency",
-        instruction: "New dominant allele frequency = (Total dominant alleles) / (Total alleles). Total alleles = 950 × 2 = 1900. Dominant alleles = 900 + 50(2) = 1000. Calculate frequency (to 2 decimal places).",
-        expectedConcept: "New dominant allele frequency = 1000 / 1900",
-        acceptedAnswers: ["0.53", ".53"],
-        tolerance: 0.01,
-        hint1: "1000 ÷ 1900.",
-        hint2: "1000 / 1900 ≈ 0.5263",
-        hint3: "0.53",
-        explanation: "New dominant allele frequency = (900 + 50×2) / (950×2) = 1000/1900 = 0.53 [1 mark]",
-        marks: 1
-      },
-      {
-        stepNumber: 8,
-        title: "Gene Pool Allele Counting: New Recessive Allele Frequency",
-        instruction: "Recessive alleles remaining come only from heterozygous insects (900). Calculate new recessive allele frequency = 900 / 1900.",
-        expectedConcept: "New recessive allele frequency = 900 / 1900",
-        acceptedAnswers: ["0.47", ".47"],
-        tolerance: 0.01,
-        hint1: "900 ÷ 1900.",
-        hint2: "900 / 1900 ≈ 0.4736",
-        hint3: "0.47",
-        explanation: "New recessive allele frequency = 900 / 1900 = 0.47 [1 mark]",
-        marks: 1
-      }
-    ],
-    finalAnswerText: "Fair allele q = 0.900, dark allele p = 0.100. Heterozygous insects = 900. After elimination, new dominant allele frequency = 0.53, new recessive allele frequency = 0.47.",
-    officialAnswerScheme: [
-      "Number of fair variety insect = 5000 - 950 = 4050 [1 mark]",
-      "Frequency of homozygous recessive genotype, q² = 4050/5000 = 0.810 [1 mark]",
-      "Frequency of recessive allele / fair allele, q = √0.81 = 0.900 [1 mark]",
-      "Since p + q = 1, frequency of dominant allele / dark allele, p = 1 - 0.9 = 0.100 [1 mark]",
-      "Frequency of heterozygous genotype 2pq = 2(0.1)(0.9) = 0.180. Number = 0.18 × 5000 = 900 insects [2 marks]",
-      "Number of homozygous dominant genotype insect = 950 - 900 = 50 [1 mark]",
-      "Total number of insects in new population = 950 [1 mark]",
-      "New dominant allele frequency = [900 + 50(2)] / [950(2)] = 1000/1900 = 0.53 [1 mark]",
-      "New recessive allele frequency = 900 / [950(2)] = 900/1900 = 0.47 [1 mark]"
-    ]
-  },
-  {
-    id: "q4",
-    number: "Question 4",
-    title: "Hamster Population with Grey Hair Elimination (600 Hamsters)",
-    source: "Essay Question 1",
-    category: "removal",
-    difficulty: "Advanced",
-    questionText: "The allele for black hair (B) is dominant over that for grey hair (b). The alleles for B and b have frequencies p and q respectively. In a randomly mating population of 600 hamsters, 216 have grey hair.\n\n(a) What is meant by a randomly mating population? [1 mark]\n(b) Assuming that the Hardy-Weinberg principle applied, calculate the frequency of the dominant allele and recessive allele in the population. [2 marks]\n(c) If all the 216 hamsters with grey hair were killed and the rest were allowed to mate randomly, calculate the frequency of the dominant and recessive alleles in the new generation. [7 marks]",
-    targetConcept: "Mating definition, Hardy-Weinberg initial calculation, and post-culling allele counting",
-    isHardyWeinberg: false,
-    whyHwOrNonHw: "Part (c) eliminates all 216 grey hamsters, altering the population and requiring allele counting via gene pool method.",
-    detectorOptions: [
-      { label: "Part (b) H-W; Part (c) Gene Pool Allele Counting after 216 grey hamsters killed", isCorrect: true, feedback: "Spot on! Killing 216 grey hamsters eliminates all bb genotypes from the gene pool." },
-      { label: "Pure Hardy-Weinberg throughout all parts", isCorrect: false, feedback: "Incorrect. Removing 216 individuals changes the allele frequencies!" }
-    ],
-    totalMarks: 10,
-    steps: [
-      {
-        stepNumber: 1,
-        title: "Definition of Random Mating",
-        instruction: "What is meant by a randomly mating population?",
-        expectedConcept: "Each individual has an equal chance to mate freely or randomly with any other individual of opposite sex",
-        acceptedAnswers: ["equal chance", "mate freely", "randomly", "equal chance to mate freely", "any individual"],
-        hint1: "Think about mating opportunities for each individual.",
-        hint2: "No preference or selection for specific genotypes.",
-        hint3: "Each individual has an equal chance to mate freely or randomly with any other individual (from the opposite sex) within the population.",
-        explanation: "Each individual has an equal chance to mate freely or randomly with any other individual (from the opposite sex) within the population [1 mark].",
-        marks: 1
-      },
-      {
-        stepNumber: 2,
-        title: "Calculate Initial Recessive Allele Frequency (q)",
-        instruction: "216 out of 600 hamsters have grey hair (q² = 216/600 = 0.36). Calculate q.",
-        expectedConcept: "q = √0.36",
-        expectedSymbol: "q",
-        acceptedAnswers: ["0.6", "0.60", ".6"],
-        tolerance: 0.01,
-        hint1: "Take square root of 0.36.",
-        hint2: "√0.36 = 0.6",
-        hint3: "0.60",
-        explanation: "Frequency of homozygous recessive genotype q² = 216/600 = 0.36. Frequency of recessive allele q = √0.36 = 0.60 [1 mark]",
-        marks: 1
-      },
-      {
-        stepNumber: 3,
-        title: "Calculate Initial Dominant Allele Frequency (p)",
-        instruction: "Using p = 1 - q, calculate p.",
-        expectedConcept: "p = 1 - 0.6",
-        expectedSymbol: "p",
-        acceptedAnswers: ["0.4", "0.40", ".4"],
-        tolerance: 0.01,
-        hint1: "1 - 0.6 = 0.4",
-        hint2: "0.40",
-        hint3: "p = 0.40",
-        explanation: "Since p + q = 1, frequency of dominant allele p = 1 - 0.6 = 0.40 [1 mark]",
-        marks: 1
-      },
-      {
-        stepNumber: 4,
-        title: "Original Heterozygous and Homozygous Dominant Numbers",
-        instruction: "Calculate number of heterozygous hamsters (2pq × 600 = 2(0.4)(0.6) × 600 = 0.48 × 600) and homozygous dominant (p² × 600 = 0.16 × 600).",
-        expectedConcept: "Heterozygotes = 288, Homozygous dominant = 96",
-        acceptedAnswers: ["288 and 96", "288, 96", "288", "96"],
-        hint1: "2pq = 0.48. 0.48 × 600 = 288.",
-        hint2: "p² = (0.4)² = 0.16. 0.16 × 600 = 96.",
-        hint3: "288 heterozygous and 96 homozygous dominant.",
-        explanation: "Heterozygous = 2pq × 600 = 288 hamsters [1 mark]. Homozygous dominant = p² × 600 = 96 hamsters [1 mark].",
-        marks: 2
-      },
-      {
-        stepNumber: 5,
-        title: "New Population Size",
-        instruction: "All 216 grey hamsters are killed. Calculate the new population size = 600 - 216.",
-        expectedConcept: "Total number of hamsters in new population = 384",
-        acceptedAnswers: ["384", "384 hamsters"],
-        tolerance: 0,
-        hint1: "600 - 216",
-        hint2: "384",
-        hint3: "384",
-        explanation: "Total number of hamsters in new population = 600 - 216 = 384 [1 mark]",
-        marks: 1
-      },
-      {
-        stepNumber: 6,
-        title: "New Dominant Allele Frequency",
-        instruction: "Dominant alleles = 96(2) + 288 = 480. Total alleles = 384(2) = 768. Calculate new dominant allele frequency = 480 / 768.",
-        expectedConcept: "New dominant allele frequency = 480 / 768",
-        acceptedAnswers: ["0.625", ".625"],
-        tolerance: 0.005,
-        hint1: "480 ÷ 768",
-        hint2: "0.625",
-        hint3: "0.625",
-        explanation: "New dominant allele frequency = [96(2) + 288] / 768 = 480/768 = 0.625 [1 mark]",
-        marks: 1
-      },
-      {
-        stepNumber: 7,
-        title: "New Recessive Allele Frequency",
-        instruction: "Recessive alleles = 288. Total alleles = 768. Calculate new recessive allele frequency = 288 / 768.",
-        expectedConcept: "New recessive allele frequency = 288 / 768",
-        acceptedAnswers: ["0.375", ".375"],
-        tolerance: 0.005,
-        hint1: "288 ÷ 768",
-        hint2: "0.375",
-        hint3: "0.375",
-        explanation: "New recessive allele frequency = 288 / 768 = 0.375 [1 mark]",
-        marks: 1
-      }
-    ],
-    finalAnswerText: "Initial: q = 0.60, p = 0.40. After eliminating grey hamsters: new dominant allele frequency = 0.625, new recessive allele frequency = 0.375.",
-    officialAnswerScheme: [
-      "Random mating definition: Each individual has an equal chance to mate freely/randomly with any other individual (opposite sex) [1 mark]",
-      "Frequency of homozygous recessive genotype, q² = 216/600 = 0.36. Recessive allele q = √0.36 = 0.60 [1 mark]",
-      "Frequency of dominant allele p = 1 - 0.6 = 0.40 [1 mark]",
-      "Frequency of heterozygous genotype 2pq = 2(0.4)(0.6) = 0.48 [1 mark]",
-      "Number of heterozygous genotypes = 2pq × 600 = 288 hamsters [1 mark]",
-      "Frequency of homozygous dominant genotype p² = (0.4)² = 0.16 [1 mark]",
-      "Number of homozygous dominant genotypes = 0.16 × 600 = 96 hamsters [1 mark]",
-      "Total number of hamsters in new population = 600 - 216 = 384 [1 mark]",
-      "New dominant allele frequency = [96(2) + 288] / 384(2) = 480/768 = 0.625 [1 mark]",
-      "New recessive allele frequency = 288 / 384(2) = 288/768 = 0.375 [1 mark]"
-    ]
-  },
-  {
-    id: "q5",
-    number: "Question 5",
-    title: "Goats/Cows with 1000 Homozygous Dominant Immigrants Added",
-    source: "Past Year Question 10",
-    category: "migration",
-    difficulty: "Advanced",
-    questionText: "A farmer has 2000 cows. A total of 1500 of the cows are brown coated, and the rest are white coated. B for brown coat is dominant, while allele b for white coat is recessive. Assume that the population of cows is at genetic equilibrium and they breed randomly.\n\n(a) Calculate the frequency for the dominant and recessive alleles of the population. [2 marks]\n(b) Calculate the genotype frequencies in the F1 generation if the cows are left to breed randomly. [3 marks]\n(c) If the farmer adds another 1000 homozygous dominant brown cows into the population, calculate the new dominant allele frequency. [2 marks]",
-    targetConcept: "Initial Hardy-Weinberg equilibrium followed by immigration / gene flow altering allele frequencies",
-    isHardyWeinberg: false,
-    whyHwOrNonHw: "Part (a)-(b) is in H-W equilibrium. In (c), adding 1000 homozygous dominant cows is immigration/gene flow, which breaks H-W equilibrium. You cannot use the H-W formula; you must count alleles in the new gene pool.",
-    detectorOptions: [
-      { label: "Part (a)-(b) H-W; Part (c) Gene Flow / Immigration Gene Pool Allele Counting", isCorrect: true, feedback: "Correct! Immigration breaks equilibrium. Allele counting is required for part (c)." },
-      { label: "Use p + q = 1 for part (c)", isCorrect: false, feedback: "You cannot simply assume H-W applies immediately after adding 1000 individuals." }
-    ],
-    totalMarks: 7,
-    steps: [
-      {
-        stepNumber: 1,
-        title: "Find Initial q²",
-        instruction: "2000 total cows, 1500 brown. White (recessive) = 2000 - 1500 = 500. Calculate q² = 500/2000.",
-        expectedConcept: "q² = 500 / 2000",
-        expectedSymbol: "q²",
-        acceptedAnswers: ["0.25", "0.250", ".25"],
-        tolerance: 0.005,
-        hint1: "500 ÷ 2000",
-        hint2: "0.25",
-        hint3: "0.250",
-        explanation: "Frequency of homozygous recessive genotype q² = 500/2000 = 0.250 [1 mark]",
-        marks: 1
-      },
-      {
-        stepNumber: 2,
-        title: "Calculate Initial q and p",
-        instruction: "Calculate q = √0.25 and p = 1 - q.",
-        expectedConcept: "q = 0.500, p = 0.500",
-        acceptedAnswers: ["0.5", "0.500", "0.5 and 0.5", ".5"],
-        tolerance: 0.01,
-        hint1: "√0.25 = 0.5. Then 1 - 0.5 = 0.5.",
-        hint2: "q = 0.500, p = 0.500",
-        hint3: "0.5",
-        explanation: "Frequency of recessive allele q = √0.25 = 0.500. Frequency of dominant allele p = 1 - 0.5 = 0.500 [1 mark]",
-        marks: 1
-      },
-      {
-        stepNumber: 3,
-        title: "F1 Genotype Frequencies (p², 2pq, q²)",
-        instruction: "Calculate p² = (0.5)², 2pq = 2(0.5)(0.5), and q² = (0.5)².",
-        expectedConcept: "p² = 0.25, 2pq = 0.50, q² = 0.25",
-        acceptedAnswers: ["0.25, 0.50, 0.25", "0.25, 0.5, 0.25", "0.25 0.5 0.25"],
-        hint1: "p² = 0.25, 2pq = 0.50, q² = 0.25.",
-        hint2: "Each is 0.25, 0.50, 0.25.",
-        hint3: "p² = 0.250, 2pq = 0.500, q² = 0.250",
-        explanation: "p² = (0.5)² = 0.250 [1 mark], 2pq = 2(0.5)(0.5) = 0.500 [1 mark], q² = (0.5)² = 0.250 [1 mark]",
-        marks: 3
-      },
-      {
-        stepNumber: 4,
-        title: "Calculate New Dominant Allele Frequency after Adding 1000 BB Cows",
-        instruction: "Original homozygous dominant = 0.25 × 2000 = 500. Add 1000 BB cows → new BB = 1500. Heterozygous = 1000. Total cows = 3000. Calculate new dominant allele frequency = [2(1500) + 1000] / [2(3000)].",
-        expectedConcept: "New dominant allele frequency = 4000 / 6000",
-        acceptedAnswers: ["0.667", "0.67", ".667"],
-        tolerance: 0.005,
-        hint1: "Dominant alleles = 2(1500) + 1000 = 4000. Total alleles = 2(3000) = 6000.",
-        hint2: "4000 ÷ 6000 = 0.667.",
-        hint3: "0.667",
-        explanation: "New dominant allele frequency = [2(1500) + 1000] / [2(3000)] = 4000/6000 = 0.667 [2 marks]",
-        marks: 2
-      }
-    ],
-    finalAnswerText: "Initial: q = 0.500, p = 0.500. F1 frequencies: p² = 0.250, 2pq = 0.500, q² = 0.250. After adding 1000 BB cows: new dominant allele frequency = 0.667.",
-    officialAnswerScheme: [
-      "Frequency of homozygous genotype, q² = 500/2000 = 0.250 [1 mark]",
-      "Frequency of recessive allele, q = √0.25 = 0.500. Dominant allele, p = 1 - 0.5 = 0.500 [1 mark]",
-      "Frequency of homozygous dominant genotype, p² = (0.5)² = 0.250 [1 mark]",
-      "Frequency of heterozygous genotype, 2pq = 2(0.5)(0.5) = 0.500 [1 mark]",
-      "Frequency of homozygous recessive genotype, q² = (0.5)² = 0.250 [1 mark]",
-      "Number of new homozygous dominant cows = 500 + 1000 = 1500; Heterozygous = 1000; Total population = 3000 [1 mark]",
-      "New dominant allele frequency = [2(1500) + 1000] / [2(3000)] = 4000/6000 = 0.667 [1 mark]"
-    ]
-  },
-  {
-    id: "q6",
-    number: "Question 6",
     title: "Thalassemia in Human Population (12,750 Population)",
     source: "Past Year Question 8",
-    category: "migration",
+    category: "hardy-weinberg",
     difficulty: "Advanced",
-    questionText: "Thalassemia is an inherited autosomal recessive blood disease in humans. Thalassemia major is severe anemia due to homozygous recessive condition, while thalassemia minor is a mild form of anemia shown in individuals with heterozygous genotype. In a population of 12,750, two individuals are suffering from thalassemia major.\n\n(a) Determine the frequencies of dominant and recessive alleles in the population (calculate up to five decimal places). [5 marks]\n(b) How many of the individuals would be suffering from thalassemia minor in the population? [2 marks]\n(c) If 1,000 normal individuals migrated out of the population, what would be the new frequencies of the dominant and recessive alleles? [3 marks]",
-    targetConcept: "Autosomal recessive disease frequencies to 5 decimal places and emigration of normal individuals",
-    isHardyWeinberg: false,
-    whyHwOrNonHw: "Part (a)-(b) in H-W equilibrium. Part (c) involves emigration of 1000 normal individuals, which changes gene pool composition.",
+    questionText: "Thalassemia is an inherited autosomal recessive blood disease in humans. Thalassemia major is severe anemia due to homozygous recessive condition, while thalassemia minor is a mild form of anemia shown in individuals with heterozygous genotype. In a population of 12,750, two individuals are suffering from thalassemia major.\n\n(a) Determine the frequencies of dominant and recessive alleles in the population (calculate up to five decimal places). [5 marks]\n(b) How many of the individuals would be suffering from thalassemia minor in the population? [2 marks]",
+    targetConcept: "Autosomal recessive disease frequencies to 5 decimal places in a large population and heterozygous carrier count",
+    isHardyWeinberg: true,
+    whyHwOrNonHw: "The population is large (12,750 individuals) and assumed to be in Hardy-Weinberg equilibrium. Calculations follow the large population 5 decimal places rule.",
     detectorOptions: [
-      { label: "Part (a)-(b) H-W; Part (c) Emigration Gene Pool Allele Counting", isCorrect: true, feedback: "Correct! Emigration changes the proportion of normal alleles." },
+      { label: "Allele frequencies to 5 decimal places (p, q) and heterozygous count (2pq × 12,750)", isCorrect: true, feedback: "Correct! We start with q² = 2/12750 to 5 decimal places, find q, then p, then 2pq." },
       { label: "Calculate only phenotype frequencies", isCorrect: false, feedback: "We need allele frequencies to 5 decimal places." }
     ],
-    totalMarks: 10,
+    totalMarks: 7,
     steps: [
       {
         stepNumber: 1,
@@ -631,50 +286,20 @@ export const QUESTIONS_DATA: QuestionData[] = [
         hint3: "319",
         explanation: "2pq = 2(0.98735)(0.01265) = 0.02498. Number of individuals = 0.02498 × 12750 = 319 [2 marks]",
         marks: 2
-      },
-      {
-        stepNumber: 5,
-        title: "Emigration: 1000 Normal Migrate Out",
-        instruction: "New population = 12750 - 1000 = 11750. Normal homozygous dominant = 12750 - 1000 - 2 - 319 = 11429. Calculate new dominant allele frequency = [2(11429) + 319] / [2(11750)].",
-        expectedConcept: "New dominant allele frequency = [2(11429) + 319] / 23500",
-        acceptedAnswers: ["0.98626", ".98626"],
-        tolerance: 0.00005,
-        hint1: "[2(11429) + 319] = 22858 + 319 = 23177.",
-        hint2: "23177 ÷ 23500 = 0.986255...",
-        hint3: "0.98626",
-        explanation: "New dominant allele frequency = [2(11429) + 319] / 2(11750) = 0.98626 [2 marks]",
-        marks: 2
-      },
-      {
-        stepNumber: 6,
-        title: "New Recessive Allele Frequency",
-        instruction: "Calculate new recessive allele frequency = [2(2) + 319] / 2(11750).",
-        expectedConcept: "New recessive allele frequency = [4 + 319] / 23500",
-        acceptedAnswers: ["0.01374", ".01374"],
-        tolerance: 0.00005,
-        hint1: "323 ÷ 23500",
-        hint2: "0.013744...",
-        hint3: "0.01374",
-        explanation: "New recessive allele frequency = [2(2) + 319] / 2(11750) = 0.01374 [1 mark]",
-        marks: 1
       }
     ],
-    finalAnswerText: "q = 0.01265, p = 0.98735. Thalassemia minor sufferers = 319. After 1000 normal individuals migrate out: new dominant allele = 0.98626, new recessive allele = 0.01374.",
+    finalAnswerText: "q = 0.01265, p = 0.98735. Number of individuals suffering from thalassemia minor = 319.",
     officialAnswerScheme: [
       "q² = 2/12750 = 0.00016 [1 mark]",
       "q = √0.00016 = 0.01265 [1 mark]",
       "p = 1 - 0.01265 = 0.98735 [1 mark]",
       "2pq = 2(0.98735)(0.01265) = 0.02498 [1 mark]",
-      "Number suffering from minor = 0.02498 × 12750 = 319 [1 mark]",
-      "Total new population = 12750 - 1000 = 11750 [1 mark]",
-      "Number of normal individuals = 12750 - 1000 - 2 - 319 = 11429 [1 mark]",
-      "New dominant allele frequency = [2(11429) + 319] / 2(11750) = 0.98626 [1 mark]",
-      "New recessive allele frequency = [2(2) + 319] / 2(11750) = 0.01374 [1 mark]"
+      "Number suffering from minor = 0.02498 × 12750 = 319 [1 mark]"
     ]
   },
   {
-    id: "q7",
-    number: "Question 7",
+    id: "q4",
+    number: "Question 4",
     title: "Wild Chickens Short Legs (16% Recessive) Next Generation Expansion",
     source: "Past Year Question 11",
     category: "next-generation",
@@ -769,8 +394,8 @@ export const QUESTIONS_DATA: QuestionData[] = [
     ]
   },
   {
-    id: "q8",
-    number: "Question 8",
+    id: "q5",
+    number: "Question 5",
     title: "Tay-Sachs Disease (1 in 3600 Persons)",
     source: "Past Year Question 14",
     category: "genotype-frequency",

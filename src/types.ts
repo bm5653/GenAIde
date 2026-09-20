@@ -4,7 +4,6 @@ export type TabType =
   | 'toolbox'
   | 'practice'
   | 'past-year'
-  | 'new-population'
   | 'pitfalls'
   | 'exit-ticket'
   | 'ai-help'
@@ -43,8 +42,6 @@ export interface QuestionData {
     | 'genotype-frequency'
     | 'heterozygotes'
     | 'population-change'
-    | 'removal'
-    | 'migration'
     | 'next-generation'
     | 'structured'
     | 'essay';

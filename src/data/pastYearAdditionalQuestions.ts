@@ -2,8 +2,8 @@ import { QuestionData } from '../types';
 
 export const ADDITIONAL_QUESTIONS: QuestionData[] = [
   {
-    id: "q9",
-    number: "Question 9",
+    id: "q6",
+    number: "Question 6",
     title: "Albinism in Babies (14%) & Dimples in 1200 Students",
     source: "Past Year Question 2",
     category: "heterozygotes",
@@ -111,8 +111,8 @@ export const ADDITIONAL_QUESTIONS: QuestionData[] = [
     ]
   },
   {
-    id: "q10",
-    number: "Question 10",
+    id: "q7",
+    number: "Question 7",
     title: "Small Mammal Fur Colour Allele Counting (60 Yellow, 1440 Black)",
     source: "Past Year Question 3",
     category: "gene-pool",
@@ -187,115 +187,6 @@ export const ADDITIONAL_QUESTIONS: QuestionData[] = [
       "Total number of B alleles = (960 × 2) + 480 = 2400 alleles [1 mark]",
       "Total number of b alleles = (60 × 2) + 480 = 600 alleles [1 mark]",
       "Frequency of yellow fur phenotype, q² = 60/1500 = 0.040 @ 0.04 [2 marks]"
-    ]
-  },
-  {
-    id: "q11",
-    number: "Question 11",
-    title: "Drosophila Wing Population Study (Vestigial Wing Removed)",
-    source: "Past Year Question 6",
-    category: "removal",
-    difficulty: "Advanced",
-    questionText: "TABLE 1 shows the results of a genetic population study on a population of Drosophila. Normal wing (L) is dominant over vestigial wing (l).\n• Normal wing: 400\n• Vestigial wing: 64\nTotal = 464 flies.\n\n(a) What is the frequency of allele L and l? [2 marks]\n(b) How many heterozygous Drosophila have normal wings? Show calculation. [3 marks]\n(c) If all vestigial winged Drosophila are removed from the population:\ni. How many homozygous dominants are left? [2 marks]\nii. Calculate the frequency of allele L and l in the new population. [4 marks]",
-    targetConcept: "Removal of recessive individuals, gene pool allele counting on survivor population",
-    isHardyWeinberg: false,
-    whyHwOrNonHw: "Initial population is in H-W equilibrium. Removing all vestigial flies is artificial selection/culling, breaking equilibrium. Part (c) requires gene pool allele counting.",
-    detectorOptions: [
-      { label: "Part (a)-(b) H-W; Part (c) Gene Pool Allele Counting after Vestigial Removed", isCorrect: true, feedback: "Correct! Removing 64 vestigial flies changes the population size and allele counts." },
-      { label: "Use p² + 2pq + q² = 1 for the new population in part (c)", isCorrect: false, feedback: "STOP! The population has changed. You must count alleles in the remaining gene pool." }
-    ],
-    totalMarks: 11,
-    steps: [
-      {
-        stepNumber: 1,
-        title: "Calculate Initial q² and q",
-        instruction: "Vestigial = 64 out of 464. q² = 64/464 = 0.14. Calculate q = √0.14.",
-        expectedConcept: "q = √0.14 = 0.37",
-        expectedSymbol: "q",
-        acceptedAnswers: ["0.37", ".37"],
-        tolerance: 0.01,
-        hint1: "√0.14 ≈ 0.374",
-        hint2: "0.37",
-        hint3: "0.37",
-        explanation: "q² = 64/464 = 0.14. Recessive allele (l), q = √0.14 = 0.37 [1 mark]",
-        marks: 1
-      },
-      {
-        stepNumber: 2,
-        title: "Calculate Initial p",
-        instruction: "p = 1 - 0.37.",
-        expectedConcept: "p = 1 - 0.37 = 0.63",
-        expectedSymbol: "p",
-        acceptedAnswers: ["0.63", ".63"],
-        tolerance: 0.01,
-        hint1: "1 - 0.37 = 0.63",
-        hint2: "0.63",
-        hint3: "0.63",
-        explanation: "Frequency of dominant allele (L), p = 1 - 0.37 = 0.63 [1 mark]",
-        marks: 1
-      },
-      {
-        stepNumber: 3,
-        title: "Calculate Number of Heterozygotes",
-        instruction: "2pq = 2(0.63)(0.37) = 0.47. Multiply by 464 flies.",
-        expectedConcept: "2pq × 464 = 218 flies",
-        acceptedAnswers: ["218", "218 flies", "218.0"],
-        tolerance: 1,
-        hint1: "0.47 × 464 = 218.08",
-        hint2: "218 flies",
-        hint3: "218",
-        explanation: "2pq = 2(0.63)(0.37) = 0.47. Number of heterozygotes = 0.47 × 464 = 218 flies [3 marks]",
-        marks: 3
-      },
-      {
-        stepNumber: 4,
-        title: "Homozygous Dominants Left after Removing 64 Vestigial Flies",
-        instruction: "Total normal flies = 400. 218 are heterozygous. Homozygous dominant = 400 - 218.",
-        expectedConcept: "Homozygous dominant = 400 - 218 = 182 flies",
-        acceptedAnswers: ["182", "182 flies"],
-        tolerance: 0,
-        hint1: "400 - 218 = 182",
-        hint2: "182",
-        hint3: "182",
-        explanation: "Number of homozygous dominant = 400 - 218 = 182 flies [2 marks]",
-        marks: 2
-      },
-      {
-        stepNumber: 5,
-        title: "New Dominant Allele L Frequency",
-        instruction: "New population = 464 - 64 = 400 flies. Total alleles = 400 × 2 = 800. Dominant alleles = (182 × 2) + 218 = 582. Calculate frequency = 582 / 800.",
-        expectedConcept: "New dominant allele L frequency = 582 / 800 = 0.73",
-        acceptedAnswers: ["0.73", ".73"],
-        tolerance: 0.01,
-        hint1: "364 + 218 = 582. 582 ÷ 800 = 0.7275.",
-        hint2: "0.73",
-        hint3: "0.73",
-        explanation: "New dominant allele L frequency = [(182 × 2) + 218] / (400 × 2) = 0.73 [2 marks]",
-        marks: 2
-      },
-      {
-        stepNumber: 6,
-        title: "New Recessive Allele l Frequency",
-        instruction: "Recessive alleles remaining come only from 218 heterozygotes. Calculate frequency = 218 / 800.",
-        expectedConcept: "New recessive allele l frequency = 218 / 800 = 0.27",
-        acceptedAnswers: ["0.27", ".27"],
-        tolerance: 0.01,
-        hint1: "218 ÷ 800 = 0.2725.",
-        hint2: "0.27",
-        hint3: "0.27",
-        explanation: "New recessive allele l frequency = 218 / 800 = 0.27 [2 marks]",
-        marks: 2
-      }
-    ],
-    finalAnswerText: "Initial: l = 0.37, L = 0.63. Heterozygotes = 218 flies. After removing vestigial: 182 homozygous dominants left; new L = 0.73, new l = 0.27.",
-    officialAnswerScheme: [
-      "q² = 64/464 = 0.14. Frequency of recessive allele (l), q = √0.14 = 0.37 [1 mark]",
-      "Since p + q = 1, dominant allele (L), p = 1 - 0.37 = 0.63 [1 mark]",
-      "2pq = 2(0.63)(0.37) = 0.47. Heterozygotes = 0.47 × 464 = 218 flies [3 marks]",
-      "Number of homozygous dominant = 400 - 218 = 182 flies [2 marks]",
-      "Total new population = 464 - 64 = 400 [1 mark]",
-      "New dominant allele L frequency = [(182 × 2) + 218] / (400 × 2) = 0.73 [2 marks]",
-      "New recessive allele l frequency = 218 / (400 × 2) = 0.27 [1 mark]"
     ]
   }
 ];

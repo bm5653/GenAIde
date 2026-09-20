@@ -621,8 +621,6 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
             <option value="gene-pool">Gene Pool Counting</option>
             <option value="hardy-weinberg">Standard Hardy-Weinberg</option>
             <option value="heterozygotes">Carriers / Heterozygotes</option>
-            <option value="migration">Migration / Gene Flow</option>
-            <option value="removal">Selective Removal / Culling</option>
           </select>
 
           <select
@@ -989,29 +987,29 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
                                 if (e.key === 'Enter') checkStep(step);
                               }}
                               placeholder={`Format e.g. ${getExampleStepText(step)}`}
-                              className={`flex-1 px-3.5 py-2.5 rounded-xl border font-mono text-xs sm:text-sm focus:ring-2 focus:outline-hidden shadow-2xs transition-colors ${
+                              className={`flex-1 px-3.5 py-2.5 rounded-xl border font-mono text-xs sm:text-sm focus:ring-2 focus:outline-hidden shadow-2xs transition-colors min-h-[42px] ${
                                 fb?.showIncorrectBanner && !fb.isCorrect && !fb.isBareAnswerWarning
                                   ? 'border-red-500 ring-2 ring-red-200 bg-red-50/50 text-red-950 focus:ring-red-500'
                                   : 'border-purple-300 bg-white text-purple-950 focus:ring-purple-500'
                               }`}
                             />
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
                               {fb?.showIncorrectBanner && !fb.isCorrect && !fb.isBareAnswerWarning && (
-                                <span className="px-2.5 py-1 bg-red-600 text-white font-extrabold text-xs rounded-lg flex items-center gap-1 shrink-0 shadow-2xs">
+                                <span className="px-2.5 py-2 bg-red-600 text-white font-extrabold text-xs rounded-xl flex items-center gap-1 shrink-0 shadow-2xs min-h-[42px]">
                                   <span>✗</span>
-                                  <span className="hidden sm:inline">Incorrect</span>
+                                  <span className="inline">Incorrect</span>
                                 </span>
                               )}
                               <button
                                 onClick={() => checkStep(step)}
-                                className="px-4 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs shadow-xs active:scale-95 whitespace-nowrap flex items-center gap-1.5"
+                                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs shadow-xs active:scale-95 whitespace-nowrap flex items-center justify-center gap-1.5 min-h-[42px] cursor-pointer"
                               >
                                 <Check className="w-4 h-4" />
                                 <span>Check Step</span>
                               </button>
                               <button
                                 onClick={() => handleRequestHint(step.stepNumber)}
-                                className="px-3 py-2.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 font-semibold text-xs border border-purple-300 flex items-center gap-1"
+                                className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 font-semibold text-xs border border-purple-300 flex items-center justify-center gap-1 min-h-[42px] cursor-pointer"
                                 title="Get progressive hint"
                               >
                                 <Lightbulb className="w-3.5 h-3.5 text-amber-600" />

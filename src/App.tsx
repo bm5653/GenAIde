@@ -12,7 +12,6 @@ import { LearnView } from './components/LearnView';
 import { PopGenToolboxView } from './components/PopGenToolboxView';
 import { PracticeView } from './components/PracticeView';
 import { PastYearView } from './components/PastYearView';
-import { NewPopulationView } from './components/NewPopulationView';
 import { PitfallsView } from './components/PitfallsView';
 import { ExitTicketView } from './components/ExitTicketView';
 import { AiHelpView } from './components/AiHelpView';
@@ -104,7 +103,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-6 sm:py-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 md:px-8 py-5 sm:py-8">
         {activeTab === 'home' && (
           <HomeView onNavigate={handleTabChange} />
         )}
@@ -130,10 +129,6 @@ export default function App() {
             onLoadQuestionIntoSolver={handleNavigateToQuestion}
             completedQuestions={userProgress.completedQuestions}
           />
-        )}
-
-        {activeTab === 'new-population' && (
-          <NewPopulationView />
         )}
 
         {activeTab === 'pitfalls' && (
@@ -192,8 +187,6 @@ export default function App() {
             <button onClick={() => handleTabChange('practice')} className="hover:text-white transition-colors cursor-pointer">Solver</button>
             <span className="text-purple-700 hidden sm:inline">•</span>
             <button onClick={() => handleTabChange('past-year')} className="hover:text-white transition-colors cursor-pointer">Past Year</button>
-            <span className="text-purple-700 hidden sm:inline">•</span>
-            <button onClick={() => handleTabChange('new-population')} className="hover:text-white transition-colors cursor-pointer">New Pop</button>
             <span className="text-purple-700 hidden sm:inline">•</span>
             <button onClick={() => handleTabChange('pitfalls')} className="hover:text-white transition-colors cursor-pointer">Pitfalls</button>
             <span className="text-purple-700 hidden sm:inline">•</span>

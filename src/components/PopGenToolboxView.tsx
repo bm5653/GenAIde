@@ -339,7 +339,8 @@ export const PopGenToolboxView: React.FC = () => {
         {/* The Live POPGEN Matrix Table */}
         {valid ? (
           <div className="space-y-4">
-            <div className="overflow-x-auto rounded-xl border-2 border-purple-300">
+            {/* Desktop / Tablet Table View */}
+            <div className="hidden md:block overflow-x-auto rounded-xl border-2 border-purple-300">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-purple-900 text-white">
@@ -359,7 +360,7 @@ export const PopGenToolboxView: React.FC = () => {
                           Recessive Phenotype
                         </span>
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 font-bold border border-amber-200">
-                          q² & q
+                          q² &amp; q
                         </span>
                       </div>
                       <div className="space-y-1">
@@ -410,7 +411,7 @@ export const PopGenToolboxView: React.FC = () => {
                           Dominant Phenotype
                         </span>
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-900 font-bold border border-purple-200">
-                          p² & 2pq
+                          p² &amp; 2pq
                         </span>
                       </div>
                       <div className="space-y-1">
@@ -466,6 +467,73 @@ export const PopGenToolboxView: React.FC = () => {
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile-Optimized Step Breakdown Card View (< md) */}
+            <div className="md:hidden space-y-4">
+              {/* Recessive Group Card */}
+              <div className="bg-white rounded-2xl border-2 border-purple-300 p-4 shadow-xs space-y-3">
+                <div className="flex items-center justify-between border-b border-purple-100 pb-2">
+                  <div className="font-black text-sm text-purple-950">
+                    Recessive Phenotype {recessivePhenotype.trim() ? `(${recessivePhenotype})` : ''}
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-xs font-bold border border-amber-300">
+                    q² &amp; q
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-2.5 rounded-xl bg-purple-50">
+                    <span className="text-[11px] text-purple-600 block">Count / Population</span>
+                    <span className="font-mono font-bold text-purple-950 text-sm">{recessiveCount} / {totalPop}</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200">
+                    <span className="text-[11px] text-amber-800 font-bold block">Step 1: Frequency q²</span>
+                    <span className="font-mono font-extrabold text-purple-950 text-sm">q² = {q2Raw.toFixed(precision)}</span>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs">
+                  <span className="text-[11px] text-emerald-800 font-bold block">Step 2: Recessive Allele (q)</span>
+                  <span className="font-mono font-extrabold text-emerald-950 text-sm">
+                    q = √({q2Raw.toFixed(precision)}) = {qRaw.toFixed(precision)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Dominant Group Card */}
+              <div className="bg-white rounded-2xl border-2 border-purple-300 p-4 shadow-xs space-y-3">
+                <div className="flex items-center justify-between border-b border-purple-100 pb-2">
+                  <div className="font-black text-sm text-purple-950">
+                    Dominant Phenotype {dominantPhenotype.trim() ? `(${dominantPhenotype})` : ''}
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-950 text-xs font-bold border border-purple-300">
+                    p² &amp; 2pq
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs">
+                  <span className="text-[11px] text-emerald-800 font-bold block">Step 3: Dominant Allele (p)</span>
+                  <span className="font-mono font-extrabold text-emerald-950 text-sm">
+                    p = 1 − {qRaw.toFixed(precision)} = {pRaw.toFixed(precision)}
+                  </span>
+                </div>
+
+                <div className="space-y-2 text-xs">
+                  <div className="p-2.5 rounded-xl bg-purple-50">
+                    <span className="text-[11px] text-purple-700 font-bold block">Step 4a: Heterozygous Carriers (2pq)</span>
+                    <span className="font-mono font-extrabold text-purple-950 text-sm">
+                      2pq = {twoPqRaw.toFixed(precision)} ({countHetero} individuals)
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-purple-50">
+                    <span className="text-[11px] text-purple-700 font-bold block">Step 4b: Homozygous Dominant (p²)</span>
+                    <span className="font-mono font-extrabold text-purple-950 text-sm">
+                      p² = {p2Raw.toFixed(precision)} ({countHomoDom} individuals)
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Quick Summary Cards */}

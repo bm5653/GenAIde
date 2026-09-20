@@ -91,19 +91,19 @@ export const SAMPLE_WORKING_IMAGES: SampleWorking[] = [
   },
   {
     id: 'sample-2',
-    label: 'Question 4 (Hamster Hair Removal - 600 total)',
-    questionNumber: 'Question 4',
-    description: 'Catches common pitfall: student used H-W formula instead of allele counting after removal.',
+    label: 'Question 3 (Thalassemia - 12,750 Population)',
+    questionNumber: 'Question 3',
+    description: 'Catches common pitfall: student used premature rounding instead of 5 decimal places precision.',
     dataUrl: createSampleSvgDataUrl(
-      'Hamster Grey Hair Elimination',
-      'Question 4',
+      'Thalassemia Population Frequency Working',
+      'Question 3',
       [
-        'Original: 600 hamsters. Grey (recessive) removed = 24 hamsters.',
-        'New population = 600 - 24 = 576 hamsters.',
-        'Step 3: q² = 0 / 576 = 0  --> Used q = √q² = 0 [HW formula]',
-        'Step 4: p = 1 - q = 1 - 0 = 1.00 [Erroneous: HW broken!]'
+        'Step 1: Homozygous recessive genotype q² = 2 / 12750 = 0.00016',
+        'Step 2: Recessive allele frequency q = √0.00016 = 0.01265',
+        'Step 3: Dominant allele frequency p = 1 - 0.01265 = 0.98735',
+        'Step 4: Thalassemia minor carriers = 2pq × 12750 = 2(0.98735)(0.01265) × 12750 = 319'
       ],
-      'Sample Student Working: Common Pitfall - Used H-W equation after culling!'
+      'Sample Student Working: High precision 5 decimal places rule for large genetic disease surveys'
     )
   },
   {
@@ -125,12 +125,12 @@ export const SAMPLE_WORKING_IMAGES: SampleWorking[] = [
   },
   {
     id: 'sample-4',
-    label: 'Question 8 (Tay-Sachs - 1 in 3600)',
-    questionNumber: 'Question 8',
+    label: 'Question 5 (Tay-Sachs - 1 in 3600)',
+    questionNumber: 'Question 5',
     description: 'Complete calculation with 1 in 3600 recessive incidence.',
     dataUrl: createSampleSvgDataUrl(
       'Tay-Sachs Frequency Working',
-      'Question 8',
+      'Question 5',
       [
         'Step 1: Frequency of Tay-Sachs individuals (q²) = 1 / 3600 = 0.00028',
         'Step 2: Recessive allele frequency q = √(1/3600) = 1/60 = 0.017',
@@ -171,69 +171,67 @@ export function analyzeUploadedWorkingImage(
   const q = matchedQ || allQuestions[1]; // Question 2
   const textLower = (imageTextNotes + ' ' + imageName).toLowerCase();
 
-  // Evaluate based on question category and content
-  if (q.category === 'removal' || q.category === 'migration' || q.category === 'gene-pool') {
-    // New population scenario evaluation
-    const usedHwFormula = textLower.includes('q²') || textLower.includes('q2') || textLower.includes('hw') || textLower.includes('sqrt') || textLower.includes('√');
-    
-    if (usedHwFormula) {
-      return {
-        questionTitle: q.title,
-        questionNumber: q.number,
-        scenarioType: 'new-population',
-        overallScore: { obtained: 2, total: 4 },
-        verdict: 'major-pitfall',
-        summaryComment: `⚠️ Major Concept Trap Detected in Step 3! You correctly identified the new population size ($N_{new}$), but you attempted to use the Hardy-Weinberg formula ($q = \\sqrt{q^2}$) after individuals were removed or added. In Matriculation Biology, whenever individuals die, are culled, or migrate, Hardy-Weinberg equilibrium is BROKEN. You must use Gene Pool Allele Counting ($2 \\times N$) instead!`,
-        steps: [
-          {
-            stepNumber: 1,
-            title: 'New Population Size (N_new)',
-            studentWorking: 'N_new calculated by subtracting or adding changed individuals',
-            expectedWorking: 'N_new = Total individuals remaining in the population',
-            isCorrect: true,
-            tickAwarded: true,
-            marksAwarded: 1,
-            maxMarks: 1,
-            diagnosticRemark: '✓ Correct: Proper arithmetic for the new population size.'
-          },
-          {
-            stepNumber: 2,
-            title: 'New Total Gene Pool Size',
-            studentWorking: 'Gene pool size = 2 × N_new',
-            expectedWorking: 'Total number of alleles in new gene pool = 2 × N_new',
-            isCorrect: true,
-            tickAwarded: true,
-            marksAwarded: 1,
-            maxMarks: 1,
-            diagnosticRemark: '✓ Correct: Recognized that diploid organisms carry 2 alleles each.'
-          },
-          {
-            stepNumber: 3,
-            title: 'Allele Frequency Counting Method',
-            studentWorking: 'Used q = √q² on surviving individuals',
-            expectedWorking: 'Count actual surviving alleles: (2 × Homozygous) + (1 × Heterozygous), then divide by 2N',
-            isCorrect: false,
-            tickAwarded: false,
-            marksAwarded: 0,
-            maxMarks: 1,
-            diagnosticRemark: '✗ Error: Hardy-Weinberg equilibrium is broken. Cannot take square root of phenotype frequency!',
-            examTip: 'Exam Golden Rule: After culling or migration, NEVER use p or q square roots. Count alleles directly.'
-          },
-          {
-            stepNumber: 4,
-            title: 'Reporting Final Allele Frequency',
-            studentWorking: 'Reported bare symbols without verbal labels',
-            expectedWorking: 'Write: "Frequency of dominant allele" & "Frequency of recessive allele"',
-            isCorrect: false,
-            tickAwarded: false,
-            marksAwarded: 0,
-            maxMarks: 1,
-            diagnosticRemark: '✗ Incomplete: Must provide full verbal descriptions for non-equilibrium allele frequencies.'
-          }
-        ],
-        socraticFollowUpQuestion: `How many TOTAL recessive alleles remain among the surviving heterozygous and homozygous individuals? Remember each heterozygote carries exactly 1 recessive allele!`
-      };
-    }
+  // Check if student attempted to take square root of dominant phenotype (e.g. p = √dominant)
+  const triedSqrtDominant = (textLower.includes('p = √') || textLower.includes('p=√') || textLower.includes('p = sqrt') || textLower.includes('p=sqrt')) && 
+                            !textLower.includes('1 - q') && !textLower.includes('1-q');
+  
+  if (triedSqrtDominant) {
+    return {
+      questionTitle: q.title,
+      questionNumber: q.number,
+      scenarioType: 'hardy-weinberg',
+      overallScore: { obtained: 1, total: 4 },
+      verdict: 'major-pitfall',
+      summaryComment: `⚠️ Critical Matriculation Trap Detected! You attempted to calculate dominant allele frequency using **p = √dominant**. In diploid populations, dominant individuals consist of TWO genotypes: homozygous dominant (**p²**) and heterozygous (**2pq**). Their combined frequency is **p² + 2pq**, NOT p² alone! You must ALWAYS start by calculating the homozygous recessive frequency (**q²**) first!`,
+      steps: [
+        {
+          stepNumber: 1,
+          title: 'Starting Phenotype Selection',
+          studentWorking: 'Attempted to take square root of dominant phenotype to find p',
+          expectedWorking: 'Must start with homozygous recessive phenotype: q² = recessive count / total population',
+          isCorrect: false,
+          tickAwarded: false,
+          marksAwarded: 0,
+          maxMarks: 1,
+          diagnosticRemark: '✗ Critical Concept Error: Dominant phenotype contains both p² and 2pq genotypes. You cannot take its square root!',
+          examTip: 'Golden Rule: Always find homozygous recessive (q²) first, because recessive individuals can only have one genotype (aa).'
+        },
+        {
+          stepNumber: 2,
+          title: 'Recessive Allele Frequency (q)',
+          studentWorking: 'Calculated q by subtracting erroneous p from 1',
+          expectedWorking: 'q = √q²',
+          isCorrect: false,
+          tickAwarded: false,
+          marksAwarded: 0,
+          maxMarks: 1,
+          diagnosticRemark: '✗ Error propagated: Because p was derived from dominant phenotype, q is invalid.'
+        },
+        {
+          stepNumber: 3,
+          title: 'Dominant Allele Frequency (p)',
+          studentWorking: 'Used erroneous p value',
+          expectedWorking: 'p = 1 - q (derived from legitimate recessive allele frequency q)',
+          isCorrect: false,
+          tickAwarded: false,
+          marksAwarded: 0,
+          maxMarks: 1,
+          diagnosticRemark: '✗ Error propagated.'
+        },
+        {
+          stepNumber: 4,
+          title: 'Genotype / Population Frequency Calculation',
+          studentWorking: 'Calculations based on invalid allele frequencies',
+          expectedWorking: 'Use legitimate p and q values into 2pq or p²',
+          isCorrect: false,
+          tickAwarded: false,
+          marksAwarded: 0,
+          maxMarks: 1,
+          diagnosticRemark: '✗ Incomplete.'
+        }
+      ],
+      socraticFollowUpQuestion: `Why can recessive individuals (q²) only possess ONE genotype (aa), while dominant individuals possess TWO genotypes (AA and Aa)? What is the frequency of homozygous recessive individuals in this question?`
+    };
   }
 
   // Check if student forgot factor of 2 in 2pq
@@ -246,7 +244,7 @@ export function analyzeUploadedWorkingImage(
       scenarioType: 'hardy-weinberg',
       overallScore: { obtained: 3, total: 4 },
       verdict: 'minor-error',
-      summaryComment: `Very close! You executed Steps 1, 2, and 3 with textbook precision ($q^2 \\to q \\to p$). However, in Step 4 you calculated $p \\times q$ instead of $2pq$. Heterozygous individuals can inherit either allele from maternal or paternal gametes, requiring the factor of 2!`,
+      summaryComment: `Very close! You executed Steps 1, 2, and 3 with textbook precision (q² → q → p). However, in Step 4 you calculated p × q instead of 2pq. Heterozygous individuals can inherit either allele from maternal or paternal gametes, requiring the factor of 2!`,
       steps: [
         {
           stepNumber: 1,
@@ -324,8 +322,8 @@ export function analyzeUploadedWorkingImage(
     scenarioType: 'hardy-weinberg',
     overallScore: { obtained: totalMarks, total: totalMarks },
     verdict: 'all-correct',
-    summaryComment: `🎉 Outstanding step-by-step working! All steps demonstrated rigorous logical progression from the homozygous recessive phenotype ($q^2$) through allele frequencies ($q$ and $p$) to the final requested parameters. All required substitution steps and units are in place!`,
+    summaryComment: `🎉 Outstanding step-by-step working! All steps demonstrated rigorous logical progression from the homozygous recessive phenotype (q²) through allele frequencies (q and p) to the final requested parameters. All required substitution steps and units are in place!`,
     steps: evaluatedSteps,
-    socraticFollowUpQuestion: `Your steps are completely accurate. If the examiner changed this population by introducing 500 homozygous dominant immigrants, what would be your very first calculation step?`
+    socraticFollowUpQuestion: `Your steps are completely accurate. If the examiner asks for the percentage of heterozygous carriers rather than their frequency, how would you convert your 2pq value?`
   };
 }

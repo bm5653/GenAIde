@@ -52,6 +52,8 @@ import {
 import { CameraCaptureModal } from './CameraCaptureModal';
 import { QUESTIONS_DATA } from '../data/questionsData';
 import { ADDITIONAL_QUESTIONS } from '../data/pastYearAdditionalQuestions';
+import { formatPopGenSymbols } from '../utils/symbolFormatter';
+import ReactMarkdown from 'react-markdown';
 
 interface ChatMessage {
   id: string;
@@ -79,15 +81,21 @@ export const AiHelpView: React.FC = () => {
       id: 'welcome',
       sender: 'bot',
       text: `👋 **POPGEN AI HELP DESK**
-**Your Population Genetics Study Companion**
+**Malaysian Matriculation Biology (SB015 Syllabus, Chapter 5: Population Genetics)**
 
-> Stuck on a question?
-> Take a photo, upload your work, or type your question.
-> I will guide you step-by-step — not just give you the answer!
+I am your supportive AI Biology tutor. Here is how I will guide you:
+1. **No direct answers:** I will not give you the final answer directly.
+2. **Step-by-step POP GEN Table approach:**
+   • **Step 1:** Identify recessive phenotype count & calculate q² = (number of recessive) / (total population).
+   • **Step 2:** Find recessive allele frequency q = √q².
+   • **Step 3:** Find dominant allele frequency p = 1 − q.
+   • **Step 4:** Calculate genotype frequencies (p², 2pq, q²) or number of individuals as requested.
+3. **Decimal precision rules:**
+   • Standard populations (N < 10,000): **2 to 3 decimal places**.
+   • Large populations (N ≥ 10,000): **up to 4 or 5 decimal places as required**.
+4. **Gentle guidance:** If you make a mistake, I'll gently point out where your working went wrong and ask guiding questions without solving remaining steps.
 
-🧬 **Chapter 5 Focus:** Allele Frequencies ($p, q$), Genotype Frequencies ($p^2, 2pq, q^2$), Hardy-Weinberg Equilibrium, and Gene Pool Allele Counting ($2 \\times N$).
-
-Remember our core motto: **"Think First. Calculate Second. Use AI Wisely."**`,
+> Share your question, take a photo, upload your working, or tell me your Step 1 to begin!`,
       time: 'Just now'
     }
   ]);
@@ -588,34 +596,34 @@ ${whyObj.commonMisconception}`;
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Left 2 Columns: Chat Window */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border-2 border-purple-200 shadow-xs flex flex-col h-[740px] overflow-hidden">
+        <div className="lg:col-span-2 bg-white rounded-2xl border-2 border-purple-200 shadow-xs flex flex-col h-[650px] sm:h-[740px] max-h-[88vh] overflow-hidden">
           
           {/* Top Chat Bar: Primary Input Option Buttons (Photo, Upload, Type, Check, Hint, Why) */}
-          <div className="p-3 bg-purple-50/90 border-b border-purple-200 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-purple-950 flex items-center gap-1.5">
+          <div className="p-2.5 sm:p-3 bg-purple-50/90 border-b border-purple-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span className="font-extrabold text-purple-950 flex items-center gap-1.5 hidden xs:flex">
                 <Sparkles className="w-3.5 h-3.5 text-purple-700" />
-                <span>Input Options:</span>
+                <span>Input:</span>
               </span>
 
               {/* 📷 Take Photo */}
               <button
                 onClick={() => setShowCameraModal(true)}
-                className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-purple-100 text-purple-900 font-bold border border-purple-300 flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
+                className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-purple-100 text-purple-900 font-bold border border-purple-300 flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer min-h-[36px]"
                 title="Take photo of homework question or written working"
               >
-                <Camera className="w-3.5 h-3.5 text-purple-700" />
-                <span>Take Photo</span>
+                <Camera className="w-3.5 h-3.5 text-purple-700 shrink-0" />
+                <span>Photo</span>
               </button>
 
               {/* 🖼 Upload Image */}
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-purple-100 text-purple-900 font-bold border border-purple-300 flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
+                className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-purple-100 text-purple-900 font-bold border border-purple-300 flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer min-h-[36px]"
                 title="Upload screenshot or worksheet image"
               >
-                <Upload className="w-3.5 h-3.5 text-purple-700" />
-                <span>Upload Image</span>
+                <Upload className="w-3.5 h-3.5 text-purple-700 shrink-0" />
+                <span>Upload</span>
               </button>
 
               {/* ✅ Check My Answer */}
@@ -624,15 +632,15 @@ ${whyObj.commonMisconception}`;
                   setActiveMode('check-answer');
                   inputRef.current?.focus();
                 }}
-                className={`px-2.5 py-1.5 rounded-lg font-bold border flex items-center gap-1 shadow-2xs transition-colors cursor-pointer ${
+                className={`px-2.5 py-1.5 rounded-lg font-bold border flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer min-h-[36px] ${
                   activeMode === 'check-answer'
                     ? 'bg-purple-800 text-white border-purple-900'
                     : 'bg-white hover:bg-purple-100 text-purple-900 border-purple-300'
                 }`}
                 title="Evaluate your working or answer"
               >
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Check My Answer</span>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span className="whitespace-nowrap">Check Answer</span>
               </button>
             </div>
 
@@ -640,19 +648,19 @@ ${whyObj.commonMisconception}`;
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => handleRequestNextHint()}
-                className="px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 font-extrabold border border-amber-300 flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
+                className="px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 font-extrabold border border-amber-300 flex items-center gap-1 shadow-2xs transition-colors cursor-pointer min-h-[36px]"
                 title="Reveal progressive hint"
               >
-                <Lightbulb className="w-3.5 h-3.5 text-amber-600" />
-                <span>I Need a Hint</span>
+                <Lightbulb className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <span>Hint</span>
               </button>
 
               <button
                 onClick={() => setShowWhyModal(true)}
-                className="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-900 font-extrabold border border-indigo-300 flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
+                className="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-900 font-extrabold border border-indigo-300 flex items-center gap-1 shadow-2xs transition-colors cursor-pointer min-h-[36px]"
                 title="Why is this formula or rule true?"
               >
-                <HelpCircle className="w-3.5 h-3.5 text-indigo-600" />
+                <HelpCircle className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                 <span>WHY?</span>
               </button>
             </div>
@@ -710,9 +718,11 @@ ${whyObj.commonMisconception}`;
                     </div>
                   )}
 
-                  {/* Message Text with Structured Styling */}
-                  <div className="whitespace-pre-line leading-relaxed">
-                    {m.text}
+                  {/* Message Text with Structured Styling & Markdown Support */}
+                  <div className="leading-relaxed text-xs sm:text-sm space-y-2 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_li]:mb-1 [&_strong]:text-purple-950 [&_strong]:font-bold [&_code]:bg-purple-100 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_pre]:bg-purple-950 [&_pre]:text-purple-100 [&_pre]:p-3 [&_pre]:rounded-xl [&_pre]:overflow-x-auto">
+                    <ReactMarkdown>
+                      {formatPopGenSymbols(m.text)}
+                    </ReactMarkdown>
                   </div>
 
                   {/* Suggested Action Chips (if provided) */}
@@ -822,7 +832,9 @@ ${whyObj.commonMisconception}`;
                           ? 'bg-amber-100/80 border-amber-300 text-amber-950'
                           : 'bg-rose-100/80 border-rose-300 text-rose-950'
                       }`}>
-                        {m.stepEvaluation.summaryComment}
+                        <ReactMarkdown>
+                          {formatPopGenSymbols(m.stepEvaluation.summaryComment)}
+                        </ReactMarkdown>
                       </div>
 
                       {/* Step-by-Step Ticks & Detailed Evaluation */}
@@ -873,7 +885,7 @@ ${whyObj.commonMisconception}`;
                                     Your Working in Image:
                                   </div>
                                   <div className="text-purple-950 font-bold break-words">
-                                    {st.studentWorking}
+                                    {formatPopGenSymbols(st.studentWorking)}
                                   </div>
                                 </div>
                                 <div className="p-2 bg-white rounded-lg border border-purple-100 space-y-0.5">
@@ -881,20 +893,20 @@ ${whyObj.commonMisconception}`;
                                     Official Matriculation Rubric:
                                   </div>
                                   <div className="text-purple-900 break-words font-medium">
-                                    {st.expectedWorking}
+                                    {formatPopGenSymbols(st.expectedWorking)}
                                   </div>
                                 </div>
                               </div>
 
                               {/* Diagnostic Remark */}
                               <div className="text-xs text-purple-900 font-medium pl-1">
-                                {st.diagnosticRemark}
+                                {formatPopGenSymbols(st.diagnosticRemark)}
                               </div>
 
                               {st.examTip && (
                                 <div className="text-[11px] text-amber-900 bg-amber-100/70 p-2 rounded-lg border border-amber-200 flex items-start gap-1.5 font-medium">
                                   <Lightbulb className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5" />
-                                  <span>{st.examTip}</span>
+                                  <span>{formatPopGenSymbols(st.examTip)}</span>
                                 </div>
                               )}
                             </div>
@@ -908,9 +920,11 @@ ${whyObj.commonMisconception}`;
                           <Brain className="w-4 h-4 text-purple-300" />
                           <span>AI Tutor's Socratic Follow-up:</span>
                         </div>
-                        <p className="text-xs leading-relaxed text-purple-100">
-                          {m.stepEvaluation.socraticFollowUpQuestion}
-                        </p>
+                        <div className="text-xs leading-relaxed text-purple-100 [&_p]:mb-1 [&_p:last-child]:mb-0">
+                          <ReactMarkdown>
+                            {formatPopGenSymbols(m.stepEvaluation.socraticFollowUpQuestion)}
+                          </ReactMarkdown>
+                        </div>
                         
                         {/* Quick Action Chips */}
                         <div className="flex flex-wrap gap-1.5 pt-1">
@@ -1177,6 +1191,30 @@ ${whyObj.commonMisconception}`;
           {/* MathToolbox for PopGen Symbol Insertion */}
           <MathToolbox lastActiveInputRef={inputRef} />
 
+          {/* Standard POP GEN Table Approach Guide Card */}
+          <div className="bg-white p-4 rounded-xl border-2 border-purple-200 shadow-2xs space-y-2.5 text-xs text-purple-950">
+            <div className="font-extrabold text-purple-900 border-b border-purple-100 pb-1.5 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <BookOpen className="w-4 h-4 text-purple-700" />
+                <span>POP GEN Table 4-Step Rules</span>
+              </span>
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">SB015</span>
+            </div>
+
+            <ol className="space-y-1.5 text-[11px] text-purple-950 list-decimal list-inside font-medium">
+              <li><strong>Step 1:</strong> Recessive count &amp; calculate q² = (number of recessive) / (total population)</li>
+              <li><strong>Step 2:</strong> Recessive allele frequency q = √q²</li>
+              <li><strong>Step 3:</strong> Dominant allele frequency p = 1 - q</li>
+              <li><strong>Step 4:</strong> Genotype frequencies (p², 2pq, q²) or number of individuals</li>
+            </ol>
+
+            <div className="pt-1 border-t border-purple-100 text-[10px] text-purple-800 space-y-0.5">
+              <span className="font-bold text-purple-900 block">Decimal Precision Standard:</span>
+              <div>• Standard populations (N &lt; 10,000): <strong>2 to 3 decimal places</strong></div>
+              <div>• Large populations (N &ge; 10,000): <strong>up to 4 or 5 decimal places</strong></div>
+            </div>
+          </div>
+
           {/* Chapter 5 Topic Scope & Matriculation Checklist */}
           <div className="bg-white p-4 rounded-xl border border-purple-200 shadow-2xs space-y-2.5 text-xs text-purple-950">
             <div className="font-extrabold text-purple-900 border-b border-purple-100 pb-1.5 flex items-center justify-between">
@@ -1194,23 +1232,23 @@ ${whyObj.commonMisconception}`;
             <ul className="space-y-1.5 text-[11px] text-purple-900">
               <li className="flex items-start gap-1.5">
                 <span className="text-purple-600 font-bold">•</span>
-                <span><strong>Allele vs Genotype:</strong> $p, q$ vs $p^2, 2pq, q^2$</span>
+                <span><strong>Allele vs Genotype:</strong> <em>p</em>, <em>q</em> vs <em>p²</em>, 2<em>pq</em>, <em>q²</em></span>
               </li>
               <li className="flex items-start gap-1.5">
                 <span className="text-purple-600 font-bold">•</span>
-                <span><strong>Hardy-Weinberg:</strong> $p+q=1$ &amp; $p^2+2pq+q^2=1$</span>
+                <span><strong>Hardy-Weinberg Equations:</strong> <em>p</em> + <em>q</em> = 1 &amp; <em>p²</em> + 2<em>pq</em> + <em>q²</em> = 1</span>
               </li>
               <li className="flex items-start gap-1.5">
                 <span className="text-purple-600 font-bold">•</span>
-                <span><strong>5 Equilibrium Conditions:</strong> Large pop, Random mating, No mutation, No migration, No selection</span>
+                <span><strong>5 Equilibrium Conditions:</strong> Large population, Random mating, No mutation, No migration, No selection</span>
               </li>
               <li className="flex items-start gap-1.5">
                 <span className="text-purple-600 font-bold">•</span>
-                <span><strong>Forces Changing Frequencies:</strong> Drift, Selection, Gene Flow</span>
+                <span><strong>Genotype Ratio:</strong> <em>p²</em> (AA) : 2<em>pq</em> (Aa) : <em>q²</em> (aa)</span>
               </li>
               <li className="flex items-start gap-1.5">
                 <span className="text-purple-600 font-bold">•</span>
-                <span><strong>Gene Pool Allele Counting:</strong> $2 \\times N$ when H-W broken</span>
+                <span><strong>Decimal Standards:</strong> 2–3 d.p. (standard) or up to 5 d.p. (large genetic surveys)</span>
               </li>
             </ul>
           </div>

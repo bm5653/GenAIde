@@ -16,13 +16,13 @@ export const AiHelpDeskPopup: React.FC<AiHelpDeskPopupProps> = ({ onNavigate }) 
   };
 
   return (
-    <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end pointer-events-none select-none">
-      <div className="pointer-events-auto">
+    <div className="fixed bottom-4 right-3 sm:bottom-5 sm:right-5 z-40 flex flex-col items-end pointer-events-none select-none max-w-[calc(100vw-24px)]">
+      <div className="pointer-events-auto w-full flex flex-col items-end">
         {/* Floating Mini Popup Panel */}
         {isOpen && (
           <div 
             id="ai-helpdesk-popup-card"
-            className="mb-3 w-80 sm:w-88 bg-white rounded-2xl shadow-2xl border-2 border-purple-300 overflow-hidden animate-in slide-in-from-bottom-5 duration-200 text-purple-950 flex flex-col"
+            className="mb-3 w-[calc(100vw-32px)] sm:w-88 max-w-sm bg-white rounded-2xl shadow-2xl border-2 border-purple-300 overflow-hidden animate-in slide-in-from-bottom-5 duration-200 text-purple-950 flex flex-col max-h-[85vh] overflow-y-auto"
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-950 p-3.5 text-white flex items-center justify-between">
@@ -56,10 +56,10 @@ export const AiHelpDeskPopup: React.FC<AiHelpDeskPopupProps> = ({ onNavigate }) 
               <div className="p-2.5 bg-white rounded-xl border border-purple-200 shadow-2xs space-y-1.5">
                 <div className="font-bold text-purple-950 text-xs flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Stuck on a calculation or question?</span>
+                  <span>4-Step POP GEN Table Support</span>
                 </div>
                 <p className="text-[11px] text-purple-800 leading-relaxed">
-                  Take a photo of your handwritten working, upload a question screenshot, or ask why a formula works!
+                  Supportive Biology tutor for SB015 Chapter 5. Guiding you step-by-step (q² → q → p → 2pq, p²) without spoiling the final answer!
                 </p>
               </div>
 

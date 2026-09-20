@@ -195,26 +195,26 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
         </div>
       </section>
 
-      {/* Special Module Spotlight: New Population Masterclass */}
+      {/* Special Module Spotlight: POP GEN 4-Step Table Strategy */}
       <section className="bg-purple-50 border-2 border-purple-200 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xs">
         <div className="space-y-2 max-w-2xl">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-amber-100 text-amber-900 text-xs font-bold border border-amber-300">
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-700" />
-            <span>Highest Student Confusion Area</span>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-emerald-100 text-emerald-900 text-xs font-bold border border-emerald-300">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+            <span>Core Exam Strategy</span>
           </div>
           <h3 className="text-xl font-bold text-purple-950">
-            The "New Population" Masterclass
+            The POP GEN 4-Step Table Strategy
           </h3>
           <p className="text-sm text-purple-900/80 leading-relaxed">
-            What happens when 50 hamsters die, 1000 goats migrate in, or all fair insects are eliminated? Hardy-Weinberg equilibrium breaks! Master the <strong>Gene Pool Allele-Counting Method</strong> with interactive visualizer.
+            Master the official 4-step sequence (<strong>q² → q → p → p² / 2pq</strong>) that Matriculation examiners award marks for. Learn why we must start with the recessive trait and avoid common traps.
           </p>
         </div>
 
         <button
-          onClick={() => onNavigate('new-population')}
+          onClick={() => onNavigate('practice')}
           className="px-5 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-sm shadow-sm transition-all whitespace-nowrap active:scale-95 flex items-center gap-2"
         >
-          <span>Open Masterclass</span>
+          <span>Open Step Solver</span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </section>

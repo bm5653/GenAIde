@@ -10,6 +10,23 @@ export type TutorMode = 'homework' | 'exam' | 'check-answer' | 'concept';
 
 export type ExplanationStyle = 'simple' | 'analogy' | 'visual' | 'step-by-step' | 'exam' | 'biological';
 
+/**
+ * System Prompt for Chapter 5 Population Genetics Assistive Tutor
+ */
+export const POPGEN_TUTOR_SYSTEM_PROMPT = `You are an expert Biology tutor for the Malaysian Matriculation College Programme (SB015 Syllabus, Chapter 5: Population Genetics). 
+
+Please act as a supportive AI tutor. Follow these rules:
+1. DO NOT give me the final answer directly.
+2. Guide me step-by-step using the standard POP GEN Table approach:
+   - Step 1: Identify recessive phenotype count & calculate q² = (number of recessive) / (total population).
+   - Step 2: Find recessive allele frequency q = √q².
+   - Step 3: Find dominant allele frequency p = 1 - q.
+   - Step 4: Calculate genotype frequencies (p², 2pq, q²) or number of individuals as requested.
+3. Ensure decimal precision matches standard rules:
+   - Standard populations: 2 to 3 decimal places.
+   - Large populations (> 10,000): up to 4 or 5 decimal places as required.
+4. If I make a mistake, gently point out where my working went wrong without solving the remaining steps for me. Ask me guiding questions to try again.`;
+
 export interface TutoringContext {
   activeQuestionNumber?: string;
   questionText?: string;
@@ -118,9 +135,9 @@ export function getScopeRedirectionMessage(query: string): StructuredSocraticRes
     text: `I'm your dedicated **Population Genetics Assistive Tutor** for **Chapter 5 (Malaysian Matriculation Biology)**.
 
 I can help you with:
-• **Allele, genotype, and phenotype frequencies** ($p$, $q$, $p^2$, $2pq$, $q^2$)
+• **Allele, genotype, and phenotype frequencies** (p, q, p², 2pq, q²)
 • **Hardy-Weinberg equilibrium** & the 5 conditions
-• **Gene pool allele counting** ($2 \\times N$) when equilibrium is broken
+• **Gene pool allele counting** (2 × N) when equilibrium is broken
 • **Forces changing allele frequency** (Genetic drift, Founder/Bottleneck effect, Natural selection, Migration, Mutation)
 • **Exam-style calculations and step-by-step problem solving**
 
@@ -167,11 +184,11 @@ export const WHY_EXPLANATIONS: Record<string, { question: string; coreReason: st
     biologicalExplanation: "In self-fertilization or positive assortative mating (like mating with like), heterozygotes (Aa) produce 50% homozygotes (AA and aa) each generation. The proportion of heterozygotes drops, while homozygosity increases. However, the total count of 'A' and 'a' alleles remains unchanged unless selection or mortality occurs.",
     commonMisconception: "Assuming that every violation of the 5 Hardy-Weinberg conditions automatically changes allele frequencies."
   },
-  'culling-breaks-hw': {
-    question: "WHY can't we use the Hardy-Weinberg formula after individuals are killed or migrate?",
-    coreReason: "The Hardy-Weinberg principle assumes an undisturbed, closed gene pool in genetic equilibrium. Culling or migration directly disrupts equilibrium.",
-    biologicalExplanation: "When recessive individuals are removed or immigrants arrive, the genotype proportions no longer follow p² + 2pq + q² = 1. Therefore, you CANNOT take the square root of surviving phenotypes! You must count actual surviving alleles in the new gene pool (Total alleles = 2 × N_new).",
-    commonMisconception: "Calculating q = √(recessive / N_new) after culling. After culling, q² no longer equals the square of q!"
+  'expansion-preserves-hw': {
+    question: "WHY do allele frequencies remain constant when a population grows under Hardy-Weinberg equilibrium?",
+    coreReason: "Under Hardy-Weinberg conditions, population growth simply scales up the total number of individuals proportionally without altering the ratio of alleles in the gene pool.",
+    biologicalExplanation: "When a population expands (e.g. from 13,000 to 15,000 individuals) under random mating and absent evolutionary forces, every genotype increases in absolute numbers by the exact same proportion. Consequently, the relative proportions p², 2pq, and q² remain unchanged, and allele frequencies p and q stay strictly identical from one generation to the next.",
+    commonMisconception: "Thinking that population growth or higher birth numbers will change allele frequencies p and q. Under Hardy-Weinberg equilibrium, allele frequencies remain constant generation after generation regardless of population growth!"
   }
 };
 
@@ -188,27 +205,27 @@ export function getDifferentExplanation(
         return `🧒 **Simple Explanation (The 2-way Handshake):**\nThink of making a heterozygous kid (Aa). You can get 'A' from mom and 'a' from dad, OR 'a' from mom and 'A' from dad. Two different paths lead to the exact same result, so we multiply by 2: **2 × p × q**.`;
       }
       if (topicKey.includes('recessive') || topicKey.includes('q²')) {
-        return `🧒 **Simple Explanation (The Hidden Identity):**\nWhen you see someone with brown eyes (dominant), you can't tell if they are pure (AA) or carrying blue (Aa). But when you see blue eyes (recessive), you are 100% sure they are 'aa'. That's why blue eyes gives you $q^2$ right away!`;
+        return `🧒 **Simple Explanation (The Hidden Identity):**\nWhen you see someone with brown eyes (dominant), you can't tell if they are pure (AA) or carrying blue (Aa). But when you see blue eyes (recessive), you are 100% sure they are 'aa'. That's why blue eyes gives you q² right away!`;
       }
-      return `🧒 **Simple Explanation:**\nIn Population Genetics, we count either **alleles** (individual letters like $A$ and $a$) or **genotypes** (pairs of letters like $AA$, $Aa$, $aa$). Always verify whether the question is talking about single alleles ($p, q$) or pairs ($p^2, 2pq, q^2$).`;
+      return `🧒 **Simple Explanation:**\nIn Population Genetics, we count either **alleles** (individual letters like A and a) or **genotypes** (pairs of letters like AA, Aa, aa). Always verify whether the question is talking about single alleles (p, q) or pairs (p², 2pq, q²).`;
 
     case 'analogy':
       if (topicKey.includes('2pq')) {
-        return `🧠 **Analogy (Tossing Two Coins):**\nImagine tossing two coins. What is the chance of getting one Head (p) and one Tail (q)?\n• Coin 1 = Head, Coin 2 = Tail (probability $p \\times q$)\n• Coin 1 = Tail, Coin 2 = Head (probability $q \\times p$)\nTotal chance of a mixed pair = $pq + qp = 2pq$!`;
+        return `🧠 **Analogy (Tossing Two Coins):**\nImagine tossing two coins. What is the chance of getting one Head (p) and one Tail (q)?\n• Coin 1 = Head, Coin 2 = Tail (probability p × q)\n• Coin 1 = Tail, Coin 2 = Head (probability q × p)\nTotal chance of a mixed pair = pq + qp = 2pq!`;
       }
       if (topicKey.includes('drift')) {
         return `🧠 **Analogy (The Marble Jar):**\nImagine a jar of 1,000 marbles (500 red, 500 blue). If you blindly pick 10 marbles, you might get 8 red and 2 blue purely by luck. But if you blindly pick 500 marbles, you will get very close to 50% red and 50% blue. Small samples experience huge random swings; large samples stay balanced.`;
       }
-      return `🧠 **Analogy (The Soup Recipe):**\nThink of the gene pool as a big soup recipe. Alleles are individual spice grains ($A$ and $a$). When organisms reproduce, they scoop up two grains to form each bowl ($AA$, $Aa$, or $aa$). The proportion of loose grains in the pot is $p$ and $q$.`;
+      return `🧠 **Analogy (The Soup Recipe):**\nThink of the gene pool as a big soup recipe. Alleles are individual spice grains (A and a). When organisms reproduce, they scoop up two grains to form each bowl (AA, Aa, or aa). The proportion of loose grains in the pot is p and q.`;
 
     case 'visual':
-      return `📊 **Visual Punnett Square of Random Fertilization:**\n\`\`\`\n         Female Gamete: p (A)    Female Gamete: q (a)\nMale (A):     p² (AA)                 pq (Aa)\nMale (a):     qp (aA)                 q² (aa)\n\`\`\`\nNotice the two off-diagonal boxes: both are heterozygous ($Aa$), giving $pq + qp = 2pq$!`;
+      return `📊 **Visual Punnett Square of Random Fertilization:**\n\`\`\`\n         Female Gamete: p (A)    Female Gamete: q (a)\nMale (A):     p² (AA)                 pq (Aa)\nMale (a):     qp (aA)                 q² (aa)\n\`\`\`\nNotice the two off-diagonal boxes: both are heterozygous (Aa), giving pq + qp = 2pq!`;
 
     case 'step-by-step':
-      return `🔢 **Step-by-Step Calculation Ladder:**\n1. **Find Recessive:** $q^2 = \\frac{\\text{Recessive Individuals}}{\\text{Total } N}$\n2. **Find Recessive Allele:** $q = \\sqrt{q^2}$\n3. **Find Dominant Allele:** $p = 1 - q$\n4. **Find Heterozygotes (Carriers):** $2pq = 2 \\times p \\times q$\n5. **Find Count of Individuals:** Multiply frequency by Total Population $N$.`;
+      return `🔢 **Step-by-Step Calculation Ladder:**\n1. **Find Recessive:** q² = (Recessive Individuals) / (Total N)\n2. **Find Recessive Allele:** q = √q²\n3. **Find Dominant Allele:** p = 1 − q\n4. **Find Heterozygotes (Carriers):** 2pq = 2 × p × q\n5. **Find Count of Individuals:** Multiply frequency by Total Population N.`;
 
     case 'exam':
-      return `📝 **Matriculation Marking Rubric Perspective:**\n• **Step 1:** Writing $q^2 = \\dots$ [1 mark for formula & substitution]\n• **Step 2:** Calculating $q = \\dots$ [1 mark]\n• **Step 3:** Showing $p = 1 - q = \\dots$ [1 mark]\n• **Step 4:** Calculating $2pq = 2(p)(q)$ [1 mark with correct decimal places]\n⚠️ *Examiner Warning:* Stating $p^2 = \\text{dominant phenotype}$ gets immediate 0 marks.`;
+      return `📝 **Matriculation Marking Rubric Perspective:**\n• **Step 1:** Writing q² = … [1 mark for formula & substitution]\n• **Step 2:** Calculating q = √q² = … [1 mark]\n• **Step 3:** Showing p = 1 − q = … [1 mark]\n• **Step 4:** Calculating 2pq = 2(p)(q) [1 mark with correct decimal places]\n⚠️ *Examiner Warning:* Stating p² = dominant phenotype gets immediate 0 marks.`;
 
     case 'biological':
       return `🔬 **Biological Meaning:**\nAllele frequencies reflect the underlying genetic diversity of the gene pool. In diploid populations, sexual reproduction and independent assortment generate genotypic variation while conserving overall allele frequencies across generations, provided no evolutionary mechanisms (selection, drift, gene flow, mutation) intervene.`;
@@ -233,14 +250,14 @@ export function checkStudentAnswer(
       evaluationDetails: {
         whatIsCorrect: "You correctly remembered to take a square root to transition from a genotype frequency to an allele frequency.",
         whereIssueOccurs: "You took the square root of the DOMINANT phenotype frequency to find p.",
-        conceptToReconsider: "Individuals showing the dominant phenotype consist of TWO genotypes: homozygous dominant ($p^2$) AND heterozygous ($2pq$). Their total frequency is $p^2 + 2pq$, NOT $p^2$.",
-        whatToTryNext: "Look for the recessive phenotype frequency ($q^2$) instead. Recessive individuals are pure $aa$, so you can safely take $q = \\sqrt{q^2}$."
+        conceptToReconsider: "Individuals showing the dominant phenotype consist of TWO genotypes: homozygous dominant (p²) AND heterozygous (2pq). Their total frequency is p² + 2pq, NOT p².",
+        whatToTryNext: "Look for the recessive phenotype frequency (q²) instead. Recessive individuals are pure aa, so you can safely take q = √q²."
       },
       text: `🔴 **LET'S REVISIT THIS**
 
 **What you did well:** You recognized that finding an allele frequency requires taking a square root.
-**Where the issue is:** You applied the square root to the dominant trait. In Population Genetics, dominant individuals are a mixture of $p^2$ (homozygous) and $2pq$ (heterozygous).
-**What to do next:** Find the recessive phenotype ($q^2$) first, calculate $q = \\sqrt{q^2}$, and then find $p = 1 - q$.`
+**Where the issue is:** You applied the square root to the dominant trait. In Population Genetics, dominant individuals are a mixture of p² (homozygous) and 2pq (heterozygous).
+**What to do next:** Find the recessive phenotype (q²) first, calculate q = √q², and then find p = 1 − q.`
     };
   }
 
@@ -253,43 +270,41 @@ export function checkStudentAnswer(
       evaluationVerdict: 'almost-there',
       evaluationDetails: {
         whatIsCorrect: "Your values for p and q are accurate, and you correctly multiplied dominant and recessive allele frequencies.",
-        whereIssueOccurs: "You wrote $p \\times q$ instead of $2pq$ for the heterozygous frequency.",
-        conceptToReconsider: "A heterozygous offspring can be formed in TWO ways: maternal A + paternal a, OR maternal a + paternal A. Both events happen with probability pq, making the total frequency $2pq$.",
-        whatToTryNext: "Multiply your result by 2 to get the complete heterozygous frequency: $2 \\times p \\times q$."
+        whereIssueOccurs: "You wrote p × q instead of 2pq for the heterozygous frequency.",
+        conceptToReconsider: "A heterozygous offspring can be formed in TWO ways: maternal A + paternal a, OR maternal a + paternal A. Both events happen with probability pq, making the total frequency 2pq.",
+        whatToTryNext: "Multiply your result by 2 to get the complete heterozygous frequency: 2 × p × q."
       },
       text: `🟡 **ALMOST THERE!**
 
-**What you did well:** Your allele frequencies ($p$ and $q$) and multiplication steps are on target!
-**Where the issue is:** You missed the factor of **2** in $2pq$.
-**Remember:** Heterozygotes can inherit $A$ from the mother and $a$ from the father, OR $a$ from the mother and $A$ from the father.
-**Try this:** Multiply your answer by 2: $2 \\times p \\times q$. What value do you get?`
+**What you did well:** Your allele frequencies (p and q) and multiplication steps are on target!
+**Where the issue is:** You missed the factor of **2** in 2pq.
+**Remember:** Heterozygotes can inherit A from the mother and a from the father, OR a from the mother and A from the father.
+**Try this:** Multiply your answer by 2: 2 × p × q. What value do you get?`
     };
   }
 
-  // 3. Check for using Hardy-Weinberg after removal or culling
-  if (input.includes('removed') || input.includes('culled') || input.includes('died') || input.includes('migrated')) {
-    if (input.includes('q = √') || input.includes('q=√') || input.includes('hw') || input.includes('p² + 2pq')) {
-      return {
-        type: 'check-result',
-        title: 'Major Pitfall Detected',
-        evaluationVerdict: 'revisit',
-        evaluationDetails: {
-          whatIsCorrect: "You recognized that the population size and composition have changed.",
-          whereIssueOccurs: "You attempted to use the Hardy-Weinberg formula ($q = \\sqrt{q^2}$) after individuals were removed or added.",
-          conceptToReconsider: "When individuals are culled or migrate, Hardy-Weinberg equilibrium is BROKEN. The genotype proportions no longer follow $p^2 + 2pq + q^2 = 1$.",
-          whatToTryNext: "Use Gene Pool Allele Counting: (1) Find surviving population $N_{new}$. (2) Gene pool = $2 \\times N_{new}$. (3) Count surviving dominant and recessive alleles directly from surviving genotypes."
-        },
-        text: `🔴 **LET'S REVISIT THIS (Exam Trap!)**
+  // 3. Check for taking square root of dominant phenotype (e.g. p = √dominant)
+  if ((input.includes('p = √') || input.includes('p=√') || input.includes('p = sqrt') || input.includes('p=sqrt')) && 
+      !input.includes('1 - q') && !input.includes('1-q')) {
+    return {
+      type: 'check-result',
+      title: 'Dominant Phenotype Trap Detected',
+      evaluationVerdict: 'revisit',
+      evaluationDetails: {
+        whatIsCorrect: "You recognized that dominant allele frequency p is needed.",
+        whereIssueOccurs: "You attempted to calculate p by taking the square root of dominant individuals.",
+        conceptToReconsider: "Dominant individuals consist of TWO genotypes (AA, p² and Aa, 2pq). Their frequency is p² + 2pq, NOT p² alone. You cannot take the square root of dominant phenotype!",
+        whatToTryNext: "Start with the homozygous recessive phenotype: q² = recessive count / total population. Then calculate q = √q², and finally p = 1 - q."
+      },
+      text: `🔴 **LET'S REVISIT THIS (The #1 Matriculation Trap!)**
 
-**Notice:** Once individuals die, are culled, or migrate, **Hardy-Weinberg equilibrium is broken!**
-You **CANNOT** use $q = \\sqrt{q^2}$ on surviving individuals.
-**Switch to Gene Pool Allele Counting:**
-1. Calculate surviving population $N_{new}$.
-2. Total alleles in new gene pool = $2 \\times N_{new}$.
-3. Count actual surviving alleles: $(2 \\times \\text{Homozygous}) + (1 \\times \\text{Heterozygous})$.
-4. Divide by total alleles.`
-      };
-    }
+**Notice:** Dominant individuals are a mixture of **homozygous dominant (p²)** and **heterozygous (2pq)**.
+You **CANNOT** take the square root of dominant individuals to find p!
+**The Guaranteed 3-Step Strategy:**
+1. Calculate recessive genotype frequency: **q² = (recessive individuals) / (total population)**
+2. Find recessive allele frequency: **q = √q²**
+3. Find dominant allele frequency: **p = 1 - q**`
+    };
   }
 
   // 4. Check for confusing allele frequency with genotype frequency
@@ -300,16 +315,16 @@ You **CANNOT** use $q = \\sqrt{q^2}$ on surviving individuals.
       evaluationVerdict: 'revisit',
       evaluationDetails: {
         whatIsCorrect: "You are actively working with the standard Population Genetics symbols.",
-        whereIssueOccurs: "Confusing single allele frequency ($p, q$) with diploid genotype frequency ($p^2, 2pq, q^2$).",
-        conceptToReconsider: "An allele is a single version of a gene carried on one chromosome ($p$ or $q$). A genotype is a pair of alleles in a diploid individual ($p^2$, $2pq$, or $q^2$).",
-        whatToTryNext: "Make sure you label $q$ as 'Frequency of recessive allele' and $q^2$ as 'Frequency of homozygous recessive genotype'."
+        whereIssueOccurs: "Confusing single allele frequency (p, q) with diploid genotype frequency (p², 2pq, q²).",
+        conceptToReconsider: "An allele is a single version of a gene carried on one chromosome (p or q). A genotype is a pair of alleles in a diploid individual (p², 2pq, or q²).",
+        whatToTryNext: "Make sure you label q as 'Frequency of recessive allele' and q² as 'Frequency of homozygous recessive genotype'."
       },
       text: `🔴 **LET'S REVISIT THIS**
 
 **Crucial Distinction:**
-• **Allele frequency:** $p$ and $q$ (frequency of individual alleles in the gene pool).
-• **Genotype frequency:** $p^2$, $2pq$, and $q^2$ (proportion of diploid individuals with specific gene pairs).
-• $q^2$ is NEVER equal to $q$ (unless frequency is 0 or 1).`
+• **Allele frequency:** p and q (frequency of individual alleles in the gene pool).
+• **Genotype frequency:** p², 2pq, and q² (proportion of diploid individuals with specific gene pairs).
+• q² is NEVER equal to q (unless frequency is 0 or 1).`
     };
   }
 
@@ -320,14 +335,16 @@ You **CANNOT** use $q = \\sqrt{q^2}$ on surviving individuals.
       title: 'On the Right Track!',
       evaluationVerdict: 'on-track',
       evaluationDetails: {
-        whatIsCorrect: "Your reasoning follows the correct Population Genetics mathematical structure.",
-        whatToTryNext: "Check your rounding against Matriculation rules: 1 d.p. for N=10-99; 2 d.p. for N=100-999; 3 d.p. for N>=1000. What does this number tell you biologically about the population?"
+        whatIsCorrect: "Your reasoning aligns with the POP GEN Table step-by-step approach.",
+        whatToTryNext: "Check decimal precision: Standard populations (N < 10,000) require 2 to 3 decimal places; large populations (N ≥ 10,000) require up to 4 or 5 decimal places. What is your next step?"
       },
       text: `🟢 **ON THE RIGHT TRACK!**
 
-Great work! Your calculation and conceptual sequence are mathematically sound.
-• **Biological check:** What does this calculated number represent? Is it an allele frequency in the gene pool, or a proportion of individuals in the population?
-• **Rounding check:** Make sure your final answer matches the population size decimal place rule.`
+Great work! Your step calculation aligns with the standard POP GEN Table approach.
+• **Decimal precision rule:**
+  - Standard populations (N < 10,000): **2 to 3 decimal places**.
+  - Large populations (N ≥ 10,000): **up to 4 or 5 decimal places**.
+• **Guiding Question:** What is your next step in the POP GEN Table sequence? (e.g. from q² → q, or from q → p = 1 − q?)`
     };
   }
 
@@ -335,10 +352,13 @@ Great work! Your calculation and conceptual sequence are mathematically sound.
     type: 'check-result',
     title: 'Let\'s Examine Your Working',
     evaluationVerdict: 'on-track',
-    text: `Let's break down your answer step-by-step!
-1. Which specific value did you start with? (e.g. recessive phenotype count or percentage?)
-2. What formula did you use in your next step?
-Tell me what numbers you used and we'll verify each step together.`
+    text: `Let's break down your working using our standard POP GEN Table approach:
+1. **Step 1:** What is your recessive phenotype count and calculated q²?
+2. **Step 2:** What value did you find for q = √q²?
+3. **Step 3:** Have you calculated p = 1 − q?
+4. **Step 4:** Which genotype frequency or individual count does the question require?
+
+Tell me which step you are currently calculating, and let's work through it together!`
   };
 }
 
@@ -364,7 +384,7 @@ export function getProgressiveHint(
 
 **Ask yourself:**
 • Which phenotype in the question is the **recessive trait**?
-• Which Hardy-Weinberg mathematical term ($p$, $q$, $p^2$, $2pq$, or $q^2$) represents the homozygous recessive genotype?
+• Which Hardy-Weinberg mathematical term (p, q, p², 2pq, or q²) represents the homozygous recessive genotype?
 
 *Take a moment: What is the recessive phenotype in your problem?*`
     };
@@ -382,9 +402,9 @@ export function getProgressiveHint(
       text: `💡 **HINT 2 — REMEMBER (Formula Reminder)**
 
 **Key Concept:**
-• $q^2$ represents the frequency of the **homozygous recessive genotype** ($aa$).
-• Because recessive individuals can ONLY have genotype $aa$, their phenotype frequency directly equals $q^2$!
-• If given as a percentage (e.g. 16%), convert it to a decimal first: $16\\% = 0.16 = q^2$.`
+• q² represents the frequency of the **homozygous recessive genotype** (aa).
+• Because recessive individuals can ONLY have genotype aa, their phenotype frequency directly equals q²!
+• If given as a percentage (e.g. 16%), convert it to a decimal first: 16% = 0.16 = q².`
     };
   }
 
@@ -400,10 +420,10 @@ export function getProgressiveHint(
       text: `💡 **HINT 3 — NEXT STEP (Mathematical Operation)**
 
 **The Operation:**
-• You know the value of $q^2$.
-• To find the allele frequency $q$, take the **square root**:
-  $$q = \\sqrt{q^2}$$
-• Once you have $q$, how will you find $p$? Remember the golden rule: **$p + q = 1$**, which means **$p = 1 - q$**!`
+• You know the value of q².
+• To find the allele frequency q, take the **square root**:
+  q = √q²
+• Once you have q, how will you find p? Remember the golden rule: **p + q = 1**, which means **p = 1 − q**!`
     };
   }
 
@@ -419,11 +439,11 @@ export function getProgressiveHint(
       text: `💡 **HINT 4 — SHOW THE REASONING (Detailed Guidance)**
 
 Here is the complete logical chain:
-1. **Recessive Genotype Frequency:** $q^2 = \\frac{\\text{Recessive Individuals}}{\\text{Total Individuals}}$
-2. **Recessive Allele Frequency:** $q = \\sqrt{q^2}$
-3. **Dominant Allele Frequency:** $p = 1 - q$
-4. **Heterozygous Genotype Frequency:** $2pq = 2 \\times p \\times q$
-5. **Number of Heterozygous Individuals (if asked):** $2pq \\times \\text{Total Population } N$
+1. **Recessive Genotype Frequency:** q² = (Recessive Individuals) / (Total Individuals)
+2. **Recessive Allele Frequency:** q = √q²
+3. **Dominant Allele Frequency:** p = 1 − q
+4. **Heterozygous Genotype Frequency:** 2pq = 2 × p × q
+5. **Number of Heterozygous Individuals (if asked):** 2pq × Total Population N
 
 *Which specific step are you currently working on?*`
     };
@@ -476,27 +496,27 @@ export function getCompleteSolutionResponse(context?: TutoringContext): Structur
 • Population is assumed to be in Hardy-Weinberg equilibrium.
 
 ### 2. Relevant Equations
-• $q^2 = \\text{Frequency of homozygous recessive individuals}$
-• $q = \\sqrt{q^2}$
-• $p = 1 - q$
-• $\\text{Frequency of heterozygotes} = 2pq$
+• q² = Frequency of homozygous recessive individuals
+• q = √q²
+• p = 1 − q
+• Frequency of heterozygotes = 2pq
 
 ### 3. Substitution & Step-by-Step Calculation
-1. **Homozygous recessive genotype frequency ($q^2$):**
-   $$q^2 = 0.36$$
-2. **Frequency of recessive allele ($q$):**
-   $$q = \\sqrt{0.36} = 0.60$$
-3. **Frequency of dominant allele ($p$):**
-   $$p = 1 - q = 1 - 0.60 = 0.40$$
-4. **Frequency of heterozygous genotype ($2pq$):**
-   $$2pq = 2(0.40)(0.60) = 0.48 \\text{ (or } 48\\%\\text{)}$$
+1. **Homozygous recessive genotype frequency (q²):**
+   q² = 0.36
+2. **Frequency of recessive allele (q):**
+   q = √0.36 = 0.60
+3. **Frequency of dominant allele (p):**
+   p = 1 − q = 1 − 0.60 = 0.40
+4. **Frequency of heterozygous genotype (2pq):**
+   2pq = 2(0.40)(0.60) = 0.48 (or 48%)
 
 ### 4. Biological Interpretation
 48% of the population are phenotypically dominant carriers who can pass the hidden recessive allele to subsequent generations.
 
 ---
 🧠 **REMEMBER:**
-Dominant phenotype equals $p^2 + 2pq$. You can **ONLY** take the square root of the recessive phenotype ($q^2$) to find an allele frequency!`
+Dominant phenotype equals p² + 2pq. You can **ONLY** take the square root of the recessive phenotype (q²) to find an allele frequency!`
   };
 }
 
@@ -579,21 +599,21 @@ To help you learn effectively, let's work on **one question at a time**. Which q
         askingSummary: "This problem involves a change in the population (individuals removed, culled, or migrating).",
         conceptSummary: "Gene Pool Allele Counting (Equilibrium is BROKEN!)",
         thinkPrompt: "When individuals are removed from a population, is the population still in Hardy-Weinberg equilibrium?",
-        yourTurnPrompt: "What is the new total population size ($N_{new}$) after the change? What is the size of the new gene pool?",
+        yourTurnPrompt: "What is the new total population size (N_new) after the change? What is the size of the new gene pool?",
         text: `### 🔎 WHAT IS THE QUESTION ASKING?
 The question asks for the allele frequencies after a disturbance (individuals killed, removed, or migrating).
 
 ### 🧬 POPULATION GENETICS CONCEPT
-**Gene Pool Allele Counting ($2 \\times N$)**
-⚠️ *Critical Principle:* Because individuals were removed or added, **Hardy-Weinberg equilibrium is BROKEN**. You cannot use $q = \\sqrt{q^2}$!
+**Gene Pool Allele Counting (2 × N)**
+⚠️ *Critical Principle:* Because individuals were removed or added, **Hardy-Weinberg equilibrium is BROKEN**. You cannot use q = √q²!
 
 ### 💭 THINK ABOUT THIS
 What happened to the total population size? How many total alleles are now present in this new diploid population?
 
 ### ✏️ YOUR TURN
 Calculate:
-1. Surviving population size ($N_{new}$)
-2. Total alleles in the new gene pool ($2 \\times N_{new}$)
+1. Surviving population size (N_new)
+2. Total alleles in the new gene pool (2 × N_new)
 What numbers do you get?`,
         suggestedActions: [
           { label: '💡 Hint 1: Think', actionText: 'Give me Hint 1: Think' },
@@ -606,29 +626,31 @@ What numbers do you get?`,
     return {
       type: 'socratic-guide',
       title: `${targetQ.number}: ${targetQ.title}`,
-      askingSummary: `The question requires calculating allele frequencies and genotype proportions for ${targetQ.title}.`,
-      conceptSummary: "Hardy-Weinberg Principle ($p + q = 1$ and $p^2 + 2pq + q^2 = 1$)",
-      thinkPrompt: "Which phenotype given in the problem represents the homozygous recessive genotype?",
-      yourTurnPrompt: "What is the frequency of the recessive phenotype ($q^2$)? Can you find $q$ by taking its square root?",
-      text: `### 🔎 WHAT IS THE QUESTION ASKING?
-${examCommandWord ? `**Command word [${examCommandWord}]:** ` : ''}Determine the allele frequencies ($p$ and $q$) and genotype frequencies for this population.
+      askingSummary: `Let's solve ${targetQ.title} step-by-step using the standard POP GEN Table approach.`,
+      conceptSummary: "POP GEN Table Approach (SB015 Syllabus, Chapter 5)",
+      thinkPrompt: "Step 1: Identify recessive phenotype count & calculate q² = (number of recessive) / (total population).",
+      yourTurnPrompt: "What is your recessive phenotype count, and what decimal value do you get for q²?",
+      text: `👋 **Let's solve this step-by-step using our POP GEN Table approach!**
 
-### 🧬 POPULATION GENETICS CONCEPT
-**Hardy-Weinberg Equilibrium**
-Because this population is in genetic equilibrium, the frequencies of alleles and genotypes follow:
-$$p + q = 1 \\quad \\text{and} \\quad p^2 + 2pq + q^2 = 1$$
+### 📋 STEP-BY-STEP POP GEN TABLE ROADMAP:
+1. **Step 1:** Identify recessive phenotype count & calculate q² = (number of recessive) / (total population).
+2. **Step 2:** Find recessive allele frequency q = √q².
+3. **Step 3:** Find dominant allele frequency p = 1 − q.
+4. **Step 4:** Calculate genotype frequencies (p², 2pq, q²) or number of individuals as requested.
 
-### 💭 THINK ABOUT THIS
-Remember our golden strategy: **Always identify the recessive phenotype first ($q^2$)**.
-Why can't you start by taking the square root of the dominant trait?
+📏 **Decimal Precision Reminder:**
+• Standard populations (N < 10,000): **2 to 3 decimal places**.
+• Large populations (N ≥ 10,000): **up to 4 or 5 decimal places**.
 
-### ✏️ YOUR TURN
-What is the decimal value of the recessive phenotype ($q^2$) in your problem?
-Once you have $q^2$, what is $q = \\sqrt{q^2}$? Tell me your first step!`,
+---
+### ✏️ STEP 1 (YOUR TURN):
+Can you identify the **recessive phenotype** in your question and calculate:
+q² = (number of recessive) / (total population)
+What value do you get for q²?`,
       suggestedActions: [
-        { label: '💡 Hint 1: Think', actionText: 'Give me Hint 1: Think' },
-        { label: '❓ WHY start with recessive?', actionText: 'WHY must we always start our calculation with the recessive phenotype?' },
-        { label: 'Check my answer', actionText: 'Check my answer: q² = ...' }
+        { label: '💡 Hint: Step 1', actionText: 'How do I identify q² for this question?' },
+        { label: 'Check my Step 1', actionText: 'Step 1: q² = ' },
+        { label: 'Why start with q²?', actionText: 'Why can\'t I start calculation with the dominant trait?' }
       ]
     };
   }
@@ -636,29 +658,30 @@ Once you have $q^2$, what is $q = \\sqrt{q^2}$? Tell me your first step!`,
   // Generic PopGen Socratic Response
   return {
     type: 'socratic-guide',
-    title: 'Population Genetics Problem Setup',
-    askingSummary: "Let's unpack what your question is asking before calculating.",
-    conceptSummary: "Chapter 5: Population Genetics Foundations",
-    thinkPrompt: "Is this question asking about an individual allele frequency (p or q) or a genotype frequency (p², 2pq, q²)?",
-    yourTurnPrompt: "What data or numbers does the question give you? Which trait is dominant and which is recessive?",
-    text: `### 🔎 WHAT IS THE QUESTION ASKING?
-Let's clearly identify the goal before jumping into arithmetic!
+    title: 'POP GEN Table Step-by-Step Guide',
+    askingSummary: "Let's guide you through the 4-step POP GEN Table approach for Chapter 5.",
+    conceptSummary: "Malaysian Matriculation SB015 - Chapter 5: Population Genetics",
+    thinkPrompt: "Step 1: Identify recessive phenotype count & calculate q² = (number of recessive) / (total population).",
+    yourTurnPrompt: "What is your population size and number of recessive individuals?",
+    text: `👋 **Welcome! Let's solve your question step-by-step using the standard POP GEN Table approach.**
 
-### 🧬 POPULATION GENETICS CONCEPT
-In Chapter 5, we always establish:
-1. **The gene pool:** Diploid population where total alleles = $2 \\times N$.
-2. **Allele frequencies:** $p$ (dominant) and $q$ (recessive), where $p + q = 1$.
-3. **Genotype frequencies:** $p^2$ ($AA$), $2pq$ ($Aa$), and $q^2$ ($aa$).
+### 📋 THE 4-STEP POP GEN TABLE APPROACH:
+1. **Step 1:** Identify recessive phenotype count & calculate q² = (number of recessive) / (total population).
+2. **Step 2:** Find recessive allele frequency q = √q².
+3. **Step 3:** Find dominant allele frequency p = 1 − q.
+4. **Step 4:** Calculate genotype frequencies (p², 2pq, q²) or number of individuals as requested.
 
-### 💭 THINK ABOUT THIS
-• What numbers or percentages are given in the problem?
-• Which trait is **recessive**?
+📏 **Decimal Precision Guidelines:**
+• Standard populations (N < 10,000): **2 to 3 decimal places**.
+• Large populations (N ≥ 10,000): **up to 4 or 5 decimal places** as required.
 
-### ✏️ YOUR TURN
-What is the first step you think we should take? (Hint: Can you find $q^2$?)`,
+---
+### ✏️ STEP 1 (LET'S START HERE):
+What numbers or percentages did your question give you? 
+Can you identify the **recessive phenotype** and calculate q²? Share your first step!`,
     suggestedActions: [
-      { label: '💡 Hint 1: Think', actionText: 'Give me Hint 1: Think' },
-      { label: '💡 Hint 2: Remember', actionText: 'Give me Hint 2: Remember formula' },
+      { label: '💡 Step 1: Find q²', actionText: 'Give me a hint on Step 1: Find q²' },
+      { label: 'Check my q²', actionText: 'Check my Step 1: q² = ' },
       { label: 'Check my answer', actionText: 'Check my answer' }
     ]
   };
