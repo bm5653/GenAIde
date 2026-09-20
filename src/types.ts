@@ -37,6 +37,8 @@ export interface StepItem {
   inputSuffix?: string;
   isFormulaChoice?: boolean;
   formulaOptions?: { label: string; value: string; isCorrect: boolean; explanation: string }[];
+  isMultipleChoice?: boolean;
+  choiceOptions?: { label: string; value: string; isCorrect: boolean; feedback?: string }[];
 }
 
 export interface QuestionData {

@@ -430,12 +430,67 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
   };
 
   // Check Step Answer with strict step calculation enforcement & PopGen error diagnosis
-  const checkStep = (step: StepItem) => {
-    const rawVal = userInputs[step.stepNumber]?.trim() || '';
+  const checkStep = (step: StepItem, selectedChoiceValue?: string) => {
+    const rawVal = (selectedChoiceValue !== undefined ? selectedChoiceValue : userInputs[step.stepNumber] || '').trim();
     if (!rawVal) return;
 
     const currentAttempt = (stepFeedback[step.stepNumber]?.attempts || 0) + 1;
     const isNumericStep = step.acceptedAnswers.some(ans => /\d/.test(ans));
+
+    // Multiple-choice step handling (e.g. Question 1 Step 5 Conclusion: Yes / No equilibrium)
+    if (step.isMultipleChoice && step.choiceOptions) {
+      const chosenOpt = step.choiceOptions.find(opt => 
+        opt.value.toLowerCase() === rawVal.toLowerCase() ||
+        opt.label.toLowerCase().includes(rawVal.toLowerCase())
+      );
+      const isChoiceCorrect = chosenOpt ? chosenOpt.isCorrect : step.acceptedAnswers.some(ans => ans.toLowerCase() === rawVal.toLowerCase());
+
+      if (isChoiceCorrect) {
+        setStepFeedback(prev => ({
+          ...prev,
+          [step.stepNumber]: {
+            isCorrect: true,
+            isBareAnswerWarning: false,
+            tickAwarded: true,
+            feedbackText: chosenOpt?.feedback || `✓ Correct Conclusion! [${step.marks || 1} ${step.marks === 1 ? 'mark' : 'marks'}]`,
+            showExplanation: true,
+            attempts: currentAttempt,
+            activeHintLevel: prev[step.stepNumber]?.activeHintLevel || 0,
+            showIncorrectBanner: false
+          }
+        }));
+
+        // If last step completed
+        if (currentStepIndex === currentQuestion.steps.length - 1) {
+          setIsQuestionFinished(true);
+          try {
+            confetti({
+              particleCount: 80,
+              spread: 70,
+              origin: { y: 0.6 }
+            });
+          } catch {}
+          onUpdateProgress(currentQuestion.id, currentQuestion.totalMarks, true);
+        } else {
+          setCurrentStepIndex(prev => prev + 1);
+        }
+      } else {
+        setStepFeedback(prev => ({
+          ...prev,
+          [step.stepNumber]: {
+            isCorrect: false,
+            isBareAnswerWarning: false,
+            tickAwarded: false,
+            feedbackText: chosenOpt?.feedback || "✗ Incorrect conclusion! Please review allele frequency changes between 1995 and 2005.",
+            showExplanation: false,
+            attempts: currentAttempt,
+            activeHintLevel: prev[step.stepNumber]?.activeHintLevel || 0,
+            showIncorrectBanner: true
+          }
+        }));
+      }
+      return;
+    }
 
     // MANDATORY REQUIREMENT: Students must give their answers in step-by-step calculation.
     // They are NOT allowed to give only their answers. They must show the steps with the description of the symbol first.
@@ -910,117 +965,200 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
                       {step.instruction}
                     </p>
 
-                    {/* Step-by-Step Calculation Answer Box */}
+                    {/* Step Answer Box (Multiple Choice Conclusion or Step-by-Step Calculation) */}
                     <div className={`p-4 rounded-xl border-2 space-y-3 transition-all ${
                       isStepPassed ? 'bg-emerald-100/40 border-emerald-400' : 'bg-white border-purple-300'
                     }`}>
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                        <label className="font-extrabold text-xs text-purple-950 flex items-center gap-1.5">
-                          <PenTool className="w-3.5 h-3.5 text-purple-700" />
-                          <span>Step-by-Step Calculation Answer Box:</span>
-                        </label>
-                        <span className="text-[11px] font-bold text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-md flex items-center gap-1">
-                          <span>⚠️ Working required (no bare answers)</span>
-                        </span>
-                      </div>
-
-                      {/* Quick Symbol & Scaffold Bar (for active step) */}
-                      {!isStepPassed && isCurrentActive && (
-                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                          <span className="text-[10px] font-bold text-purple-800 uppercase tracking-wide">Quick Insert:</span>
-                          <button
-                            type="button"
-                            onClick={() => handleInsertScaffoldToStep(step)}
-                            className="px-2.5 py-1 rounded-md bg-purple-800 hover:bg-purple-900 text-white font-bold text-xs flex items-center gap-1 shadow-2xs active:scale-95 transition-all"
-                            title="Insert complete calculation template with symbol description"
-                          >
-                            <span>📝 Insert Step Template (With Description)</span>
-                          </button>
-                          {['q² =', 'q = √', 'p = 1 -', '2pq =', 'p² =', '√', '÷', '×', '=', '²'].map((sym) => (
-                            <button
-                              key={sym}
-                              type="button"
-                              onClick={() => handleInsertSymbolToStep(step.stepNumber, sym)}
-                              className="px-2 py-0.5 rounded-md bg-purple-100 hover:bg-purple-200 text-purple-900 font-mono font-bold text-xs border border-purple-200 active:scale-95 transition-all"
-                              title={`Insert ${sym}`}
-                            >
-                              {sym}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Input or Verified Display */}
-                      {isStepPassed ? (
-                        <div className="p-3 bg-emerald-100/70 border-2 border-emerald-400 rounded-xl space-y-1.5">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-emerald-900 flex items-center gap-1">
-                              <Check className="w-4 h-4 text-emerald-700 stroke-[3]" />
-                              <span>Verified Step Calculation (Description + Working):</span>
-                            </span>
-                            <span className="px-2.5 py-0.5 bg-emerald-700 text-white text-[11px] font-extrabold rounded-md flex items-center gap-1">
-                              <span>✓ [{step.marks} {step.marks === 1 ? 'mark' : 'marks'}]</span>
+                      {step.isMultipleChoice && step.choiceOptions ? (
+                        /* Multiple Choice Answer Box (For Qualitative / Conclusion steps) */
+                        <div className="space-y-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <label className="font-extrabold text-xs text-purple-950 flex items-center gap-1.5">
+                              <HelpCircle className="w-3.5 h-3.5 text-purple-700" />
+                              <span>Select Conclusion (Multiple Choice):</span>
+                            </label>
+                            <span className="text-[11px] font-bold text-purple-900 bg-purple-100 border border-purple-300 px-2 py-0.5 rounded-md flex items-center gap-1">
+                              <span>💡 No calculation working required • Select conclusion</span>
                             </span>
                           </div>
-                          <div className="font-mono font-bold text-emerald-950 text-sm bg-white/90 p-2.5 rounded-lg border border-emerald-300 leading-relaxed">
-                            {formatStepWithDescription(step, userInputs[step.stepNumber])}
+
+                          {/* Options List */}
+                          <div className="space-y-2 pt-1">
+                            {step.choiceOptions.map((opt, optIdx) => {
+                              const isSelected = (userInputs[step.stepNumber] || '').toLowerCase() === opt.value.toLowerCase() || (userInputs[step.stepNumber] || '').toLowerCase() === opt.label.toLowerCase();
+                              const isOptionPassed = isStepPassed && isSelected;
+                              
+                              return (
+                                <button
+                                  key={optIdx}
+                                  type="button"
+                                  disabled={isStepPassed || !isCurrentActive}
+                                  onClick={() => {
+                                    if (isStepPassed || !isCurrentActive) return;
+                                    setUserInputs(prev => ({ ...prev, [step.stepNumber]: opt.value }));
+                                    checkStep(step, opt.value);
+                                  }}
+                                  className={`w-full p-3.5 rounded-xl text-left text-xs sm:text-sm font-bold border-2 transition-all flex items-start gap-3 cursor-pointer ${
+                                    isOptionPassed
+                                      ? 'bg-emerald-50 border-emerald-500 text-emerald-950 shadow-xs'
+                                      : isSelected && fb?.showIncorrectBanner && !fb.isCorrect
+                                      ? 'bg-red-50 border-red-500 text-red-950'
+                                      : isCurrentActive
+                                      ? 'bg-white hover:bg-purple-50 hover:border-purple-400 border-purple-200 text-purple-950 shadow-2xs active:scale-[0.99]'
+                                      : 'bg-gray-50 border-gray-200 text-gray-700 opacity-60'
+                                  }`}
+                                >
+                                  <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 border ${
+                                    isOptionPassed
+                                      ? 'bg-emerald-600 text-white border-emerald-700'
+                                      : isSelected && fb?.showIncorrectBanner && !fb.isCorrect
+                                      ? 'bg-red-600 text-white border-red-700'
+                                      : 'bg-purple-100 text-purple-900 border-purple-300'
+                                  }`}>
+                                    {isOptionPassed ? '✓' : isSelected && fb?.showIncorrectBanner && !fb.isCorrect ? '✗' : String.fromCharCode(65 + optIdx)}
+                                  </div>
+                                  <div className="flex-1 space-y-1">
+                                    <div className="text-sm font-black tracking-tight">{opt.label}</div>
+                                    {isSelected && isStepPassed && (
+                                      <p className="text-xs text-emerald-800 font-medium leading-relaxed">
+                                        {opt.feedback}
+                                      </p>
+                                    )}
+                                  </div>
+                                </button>
+                              );
+                            })}
                           </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-1.5">
-                          <div className="flex flex-col sm:flex-row gap-2">
-                            <input
-                              ref={isCurrentActive ? activeInputRef : undefined}
-                              type="text"
-                              value={userInputs[step.stepNumber] || ''}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setUserInputs(prev => ({ ...prev, [step.stepNumber]: val }));
-                                if (fb?.showIncorrectBanner) {
-                                  setStepFeedback(prevFeedback => ({
-                                    ...prevFeedback,
-                                    [step.stepNumber]: { ...prevFeedback[step.stepNumber], showIncorrectBanner: false }
-                                  }));
-                                }
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') checkStep(step);
-                              }}
-                              placeholder={`Format e.g. ${getExampleStepText(step)}`}
-                              className={`flex-1 px-3.5 py-2.5 rounded-xl border font-mono text-xs sm:text-sm focus:ring-2 focus:outline-hidden shadow-2xs transition-colors min-h-[42px] ${
-                                fb?.showIncorrectBanner && !fb.isCorrect && !fb.isBareAnswerWarning
-                                  ? 'border-red-500 ring-2 ring-red-200 bg-red-50/50 text-red-950 focus:ring-red-500'
-                                  : 'border-purple-300 bg-white text-purple-950 focus:ring-purple-500'
-                              }`}
-                            />
-                            <div className="flex items-center gap-2 w-full sm:w-auto">
-                              {fb?.showIncorrectBanner && !fb.isCorrect && !fb.isBareAnswerWarning && (
-                                <span className="px-2.5 py-2 bg-red-600 text-white font-extrabold text-xs rounded-xl flex items-center gap-1 shrink-0 shadow-2xs min-h-[42px]">
-                                  <span>✗</span>
-                                  <span className="inline">Incorrect</span>
-                                </span>
-                              )}
+
+                          {/* Quick Hint Button for Multiple Choice */}
+                          {!isStepPassed && isCurrentActive && (
+                            <div className="flex items-center justify-between pt-1">
+                              <span className="text-[11px] text-purple-700 font-medium">
+                                Click on the correct conclusion above to submit.
+                              </span>
                               <button
-                                onClick={() => checkStep(step)}
-                                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs shadow-xs active:scale-95 whitespace-nowrap flex items-center justify-center gap-1.5 min-h-[42px] cursor-pointer"
-                              >
-                                <Check className="w-4 h-4" />
-                                <span>Check Step</span>
-                              </button>
-                              <button
+                                type="button"
                                 onClick={() => handleRequestHint(step.stepNumber)}
-                                className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 font-semibold text-xs border border-purple-300 flex items-center justify-center gap-1 min-h-[42px] cursor-pointer"
-                                title="Get progressive hint"
+                                className="px-3 py-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold text-xs border border-purple-300 flex items-center gap-1 cursor-pointer transition-colors"
                               >
                                 <Lightbulb className="w-3.5 h-3.5 text-amber-600" />
                                 <span>Hint {(fb?.activeHintLevel || 0) > 0 ? `(${fb?.activeHintLevel}/3)` : ''}</span>
                               </button>
                             </div>
-                          </div>
-                          <p className="text-[11px] text-purple-800 font-medium leading-normal">
-                            Exam Standard Format: State description first, then symbol &amp; substitution structure (e.g. <span className="font-mono font-bold text-purple-950">{getExampleStepText(step)}</span>)
-                          </p>
+                          )}
                         </div>
+                      ) : (
+                        /* Standard Calculation Step Answer Box with Working */
+                        <>
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <label className="font-extrabold text-xs text-purple-950 flex items-center gap-1.5">
+                              <PenTool className="w-3.5 h-3.5 text-purple-700" />
+                              <span>Step-by-Step Calculation Answer Box:</span>
+                            </label>
+                            <span className="text-[11px] font-bold text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-md flex items-center gap-1">
+                              <span>⚠️ Working required (no bare answers)</span>
+                            </span>
+                          </div>
+
+                          {/* Quick Symbol & Scaffold Bar (for active step) */}
+                          {!isStepPassed && isCurrentActive && (
+                            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                              <span className="text-[10px] font-bold text-purple-800 uppercase tracking-wide">Quick Insert:</span>
+                              <button
+                                type="button"
+                                onClick={() => handleInsertScaffoldToStep(step)}
+                                className="px-2.5 py-1 rounded-md bg-purple-800 hover:bg-purple-900 text-white font-bold text-xs flex items-center gap-1 shadow-2xs active:scale-95 transition-all"
+                                title="Insert complete calculation template with symbol description"
+                              >
+                                <span>📝 Insert Step Template (With Description)</span>
+                              </button>
+                              {['q² =', 'q = √', 'p = 1 -', '2pq =', 'p² =', '√', '÷', '×', '=', '²'].map((sym) => (
+                                <button
+                                  key={sym}
+                                  type="button"
+                                  onClick={() => handleInsertSymbolToStep(step.stepNumber, sym)}
+                                  className="px-2 py-0.5 rounded-md bg-purple-100 hover:bg-purple-200 text-purple-900 font-mono font-bold text-xs border border-purple-200 active:scale-95 transition-all"
+                                  title={`Insert ${sym}`}
+                                >
+                                  {sym}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Input or Verified Display */}
+                          {isStepPassed ? (
+                            <div className="p-3 bg-emerald-100/70 border-2 border-emerald-400 rounded-xl space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-emerald-900 flex items-center gap-1">
+                                  <Check className="w-4 h-4 text-emerald-700 stroke-[3]" />
+                                  <span>Verified Step Calculation (Description + Working):</span>
+                                </span>
+                                <span className="px-2.5 py-0.5 bg-emerald-700 text-white text-[11px] font-extrabold rounded-md flex items-center gap-1">
+                                  <span>✓ [{step.marks} {step.marks === 1 ? 'mark' : 'marks'}]</span>
+                                </span>
+                              </div>
+                              <div className="font-mono font-bold text-emerald-950 text-sm bg-white/90 p-2.5 rounded-lg border border-emerald-300 leading-relaxed">
+                                {formatStepWithDescription(step, userInputs[step.stepNumber])}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-1.5">
+                              <div className="flex flex-col sm:flex-row gap-2">
+                                <input
+                                  ref={isCurrentActive ? activeInputRef : undefined}
+                                  type="text"
+                                  value={userInputs[step.stepNumber] || ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setUserInputs(prev => ({ ...prev, [step.stepNumber]: val }));
+                                    if (fb?.showIncorrectBanner) {
+                                      setStepFeedback(prevFeedback => ({
+                                        ...prevFeedback,
+                                        [step.stepNumber]: { ...prevFeedback[step.stepNumber], showIncorrectBanner: false }
+                                      }));
+                                    }
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') checkStep(step);
+                                  }}
+                                  placeholder={`Format e.g. ${getExampleStepText(step)}`}
+                                  className={`flex-1 px-3.5 py-2.5 rounded-xl border font-mono text-xs sm:text-sm focus:ring-2 focus:outline-hidden shadow-2xs transition-colors min-h-[42px] ${
+                                    fb?.showIncorrectBanner && !fb.isCorrect && !fb.isBareAnswerWarning
+                                      ? 'border-red-500 ring-2 ring-red-200 bg-red-50/50 text-red-950 focus:ring-red-500'
+                                      : 'border-purple-300 bg-white text-purple-950 focus:ring-purple-500'
+                                  }`}
+                                />
+                                <div className="flex items-center gap-2 w-full sm:w-auto">
+                                  {fb?.showIncorrectBanner && !fb.isCorrect && !fb.isBareAnswerWarning && (
+                                    <span className="px-2.5 py-2 bg-red-600 text-white font-extrabold text-xs rounded-xl flex items-center gap-1 shrink-0 shadow-2xs min-h-[42px]">
+                                      <span>✗</span>
+                                      <span className="inline">Incorrect</span>
+                                    </span>
+                                  )}
+                                  <button
+                                    onClick={() => checkStep(step)}
+                                    className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs shadow-xs active:scale-95 whitespace-nowrap flex items-center justify-center gap-1.5 min-h-[42px] cursor-pointer"
+                                  >
+                                    <Check className="w-4 h-4" />
+                                    <span>Check Step</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleRequestHint(step.stepNumber)}
+                                    className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 font-semibold text-xs border border-purple-300 flex items-center justify-center gap-1 min-h-[42px] cursor-pointer"
+                                    title="Get progressive hint"
+                                  >
+                                    <Lightbulb className="w-3.5 h-3.5 text-amber-600" />
+                                    <span>Hint {(fb?.activeHintLevel || 0) > 0 ? `(${fb?.activeHintLevel}/3)` : ''}</span>
+                                  </button>
+                                </div>
+                              </div>
+                              <p className="text-[11px] text-purple-800 font-medium leading-normal">
+                                Exam Standard Format: State description first, then symbol &amp; substitution structure (e.g. <span className="font-mono font-bold text-purple-950">{getExampleStepText(step)}</span>)
+                              </p>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
 

@@ -80,13 +80,28 @@ export const QUESTIONS_DATA: QuestionData[] = [
       {
         stepNumber: 5,
         title: "Conclusion about Population Equilibrium",
-        instruction: "Compare q in 1995 (0.0283) and 2005 (0.0400). Is the population in equilibrium?",
-        expectedConcept: "The population is not in equilibrium / evolving",
-        acceptedAnswers: ["not equilibrium", "not in equilibrium", "population is not in equilibrium", "it is evolving", "evolving", "no"],
-        hint1: "Did the recessive allele frequency remain constant from 1995 to 2005?",
-        hint2: "0.0283 ≠ 0.0400. The frequency increased.",
-        hint3: "Since allele frequency changed, the population is NOT in equilibrium.",
-        explanation: "The population is not in equilibrium [1 mark] because allele frequency changed from 0.0283 to 0.0400.",
+        instruction: "Compare the recessive allele frequency in 1995 (q = 0.0283) and in 2005 (q = 0.0400). Based on this comparison, is the population in genetic equilibrium?",
+        expectedConcept: "The population is not in equilibrium / evolving (recessive allele frequency changed from 0.0283 to 0.0400)",
+        acceptedAnswers: ["not in equilibrium", "no", "not following equilibrium", "population is not in equilibrium", "it is not in equilibrium"],
+        isMultipleChoice: true,
+        choiceOptions: [
+          {
+            label: "No / Not in equilibrium (Not following equilibrium)",
+            value: "not in equilibrium",
+            isCorrect: true,
+            feedback: "Correct! The recessive allele frequency changed from 0.0283 (1995) to 0.0400 (2005). Because allele frequencies are not constant over generations, the population is not in Hardy-Weinberg equilibrium."
+          },
+          {
+            label: "Yes / In equilibrium (Following equilibrium)",
+            value: "in equilibrium",
+            isCorrect: false,
+            feedback: "Incorrect. For a population to follow Hardy-Weinberg equilibrium, allele frequencies must remain constant across generations (q_1995 = q_2005). Here, q changed from 0.0283 to 0.0400, meaning microevolution is occurring."
+          }
+        ],
+        hint1: "Compare the recessive allele frequencies: 1995 (q = 0.0283) vs 2005 (q = 0.0400). Did it stay constant?",
+        hint2: "Since 0.0283 ≠ 0.0400, the allele frequency has changed (increased) over the 10-year period.",
+        hint3: "Because the allele frequency changed across generations, the population is NOT in equilibrium.",
+        explanation: "Conclusion: The population is not in equilibrium [1 mark] because the recessive allele frequency changed from 0.0283 in 1995 to 0.0400 in 2005.",
         marks: 1
       }
     ],
