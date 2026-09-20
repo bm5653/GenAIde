@@ -1,5 +1,6 @@
 import React from 'react';
 import { TabType } from '../types';
+import { AiHelpDeskPopup } from './AiHelpDeskPopup';
 import { 
   BookOpen, 
   PenTool, 
@@ -322,6 +323,9 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
           </div>
         </div>
       </section>
+
+      {/* AI Help Desk Popup Shortcut at Bottom-Right Corner */}
+      <AiHelpDeskPopup onNavigate={onNavigate} />
     </div>
   );
 };
