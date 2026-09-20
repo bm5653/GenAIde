@@ -201,7 +201,7 @@ export default function App() {
               <span className="text-purple-700 hidden sm:inline">•</span>
               <button onClick={() => handleTabChange('exit-ticket')} className="hover:text-white transition-colors cursor-pointer">Exit Ticket</button>
               <span className="text-purple-700 hidden sm:inline">•</span>
-              <button onClick={() => handleTabChange('genaide-tutor')} className="hover:text-white transition-colors cursor-pointer">GenAIde Tutor</button>
+              <button onClick={() => handleTabChange('genaide-tutor')} className="hover:text-white transition-colors cursor-pointer">GenAIde Study Prompt</button>
               <span className="text-purple-700 hidden sm:inline">•</span>
               <button onClick={() => handleTabChange('notes')} className="hover:text-white transition-colors cursor-pointer">Notes &amp; Cards</button>
               <span className="text-purple-700 hidden sm:inline">•</span>

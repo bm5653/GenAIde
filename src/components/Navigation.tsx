@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { TabType } from '../types';
+import { CuteRobotIcon } from './CuteRobotIcon';
 import { 
   Home, 
   BookOpen, 
@@ -48,7 +49,7 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
   const toolsNavItems: NavItem[] = [
     { id: 'pitfalls', label: 'PopGen Pitfalls', shortLabel: 'Pitfalls', icon: AlertTriangle, category: 'tools' },
     { id: 'exit-ticket', label: 'Exit Ticket', shortLabel: 'Exit Ticket', icon: Target, badge: 'Game', badgeClass: 'bg-amber-400 text-purple-950 font-extrabold', category: 'tools' },
-    { id: 'genaide-tutor', label: 'GenAIde Tutor', shortLabel: 'GenAIde Tutor', icon: Sparkles, badge: 'AI', badgeClass: 'bg-emerald-400 text-emerald-950 font-extrabold', category: 'tools' },
+    { id: 'genaide-tutor', label: 'GenAIde Study Prompt', shortLabel: 'Study Prompt', icon: CuteRobotIcon, badge: 'PROMPT', badgeClass: 'bg-emerald-400 text-emerald-950 font-extrabold', category: 'tools' },
     { id: 'notes', label: 'Notes & Flashcards', shortLabel: 'Notes/Cards', icon: FileText, badge: 'Cards', badgeClass: 'bg-cyan-300 text-cyan-950 font-bold', category: 'tools' },
     { id: 'progress', label: 'My Progress', shortLabel: 'Progress', icon: BarChart3, badge: 'Stats', badgeClass: 'bg-rose-300 text-rose-950 font-bold', category: 'tools' },
   ];
@@ -161,7 +162,7 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-900/90 text-purple-100 hover:text-white text-xs font-bold border border-purple-600 active:bg-purple-800 shrink-0 cursor-pointer shadow-2xs min-h-[40px]"
               aria-label="Toggle all navigation tabs menu"
             >
-              <span>{mobileExpanded ? 'Close Menu' : 'All 11 Tabs'}</span>
+              <span>{mobileExpanded ? 'Close Menu' : 'All 10 Tabs'}</span>
               {mobileExpanded ? <ChevronUp className="w-4 h-4 text-purple-300" /> : <ChevronDown className="w-4 h-4 text-purple-300" />}
             </button>
           </div>
@@ -190,7 +191,7 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
             </div>
           )}
 
-          {/* All 11 Tabs Mobile Drawer Grid (Generous 48px touch targets for mobile thumbs) */}
+          {/* All 10 Tabs Mobile Drawer Grid (Generous 48px touch targets for mobile thumbs) */}
           {mobileExpanded && (
             <div className="bg-[#240b54] p-3 rounded-xl border border-purple-700/80 space-y-3 animate-in fade-in duration-150 shadow-xl">
               {/* Category 1: Core Learning & Practice */}

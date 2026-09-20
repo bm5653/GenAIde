@@ -546,6 +546,75 @@ The ultimate goal is:
     }
   });
 
+  // API Route to Scan and Transcribe Question Text from Camera / Image
+  app.post("/api/scan-question", async (req, res) => {
+    try {
+      const { imageBase64 } = req.body;
+      const apiKey = process.env.GEMINI_API_KEY;
+
+      if (!apiKey) {
+        return res.status(500).json({
+          error: "GEMINI_API_KEY is not configured on the server."
+        });
+      }
+
+      if (!imageBase64) {
+        return res.status(400).json({
+          error: "No image data provided for scanning."
+        });
+      }
+
+      const ai = new GoogleGenAI({ apiKey });
+      const matches = imageBase64.match(/^data:(.+?);base64,(.+)$/);
+      let mimeType = 'image/jpeg';
+      let data = imageBase64;
+      if (matches) {
+        mimeType = matches[1];
+        data = matches[2];
+      }
+
+      const prompt = `You are an OCR and document transcription specialist for Biology students (Matriculation SB015 Chapter 5 Population Genetics & General Biology).
+
+Task:
+Extract and transcribe the exact text of the question shown in this camera photo / image.
+
+Guidelines:
+1. Extract the full question prompt, including introductory text, numbers, given data, percentages, and sub-questions (e.g., (a), (b), (i), (ii)).
+2. Transcribe mathematical and biological notation accurately (such as p, q, p², 2pq, q², genotypes like AA, Aa, aa, frequency values, and formulas).
+3. If there are multiple-choice options (A, B, C, D) or tables, transcribe them cleanly.
+4. Do NOT solve or answer the question. Only output the extracted question text as written.
+5. If some parts are slightly blurry or handwritten, use your best context inference to produce clear, readable text.
+6. Return only the extracted text without introductory chat phrases.`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: prompt },
+              {
+                inlineData: {
+                  mimeType,
+                  data
+                }
+              }
+            ]
+          }
+        ],
+        config: {
+          temperature: 0.1,
+        }
+      });
+
+      const extractedText = response.text?.trim() || "";
+      res.json({ extractedText });
+    } catch (err: any) {
+      console.error("Scan question error:", err);
+      res.status(500).json({ error: err.message || "Failed to scan text from image" });
+    }
+  });
+
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
   });
