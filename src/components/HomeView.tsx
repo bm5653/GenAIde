@@ -1,6 +1,5 @@
 import React from 'react';
 import { TabType } from '../types';
-import { AiHelpDeskPopup } from './AiHelpDeskPopup';
 import { 
   BookOpen, 
   PenTool, 
@@ -253,25 +252,25 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
             </div>
           </div>
 
-          {/* Card 2: AI Help Desk */}
+          {/* Card 2: GenAIde Tutor */}
           <div 
-            onClick={() => onNavigate('ai-help')}
+            onClick={() => onNavigate('genaide-tutor')}
             className="group cursor-pointer bg-white rounded-xl p-5 border-2 border-emerald-200 hover:border-emerald-400 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3"
           >
             <div className="space-y-2">
               <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-black group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                <Bot className="w-5 h-5" />
+                <Sparkles className="w-5 h-5" />
               </div>
               <div className="flex items-center gap-1.5">
-                <h3 className="font-bold text-purple-950 text-base">AI Help Desk</h3>
+                <h3 className="font-bold text-purple-950 text-base">GenAIde Tutor</h3>
                 <span className="text-[10px] uppercase font-black px-1.5 py-0.2 rounded-full bg-emerald-400 text-emerald-950">AI</span>
               </div>
               <p className="text-xs text-purple-900/80 leading-relaxed">
-                Stuck on a tricky tutorial question? Upload photo or type working for instant error checking.
+                Your SB015 study buddy. Get step-by-step guidance, progressive hints, and calculation checks.
               </p>
             </div>
             <div className="text-xs font-bold text-emerald-700 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-              <span>Ask AI Tutor</span>
+              <span>Ask GenAIde Tutor</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </div>
           </div>
@@ -323,9 +322,6 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
           </div>
         </div>
       </section>
-
-      {/* AI Help Desk Popup Shortcut at Bottom-Right Corner */}
-      <AiHelpDeskPopup onNavigate={onNavigate} />
     </div>
   );
 };

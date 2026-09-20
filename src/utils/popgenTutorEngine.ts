@@ -590,7 +590,7 @@ To help you learn effectively, let's work on **one question at a time**. Which q
   }
 
   if (targetQ) {
-    const isRemoval = targetQ.category === 'removal' || targetQ.category === 'migration' || targetQ.category === 'gene-pool';
+    const isRemoval = targetQ.category === ('gene-pool' as any);
     
     if (isRemoval) {
       return {

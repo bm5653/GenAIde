@@ -44,11 +44,11 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
     { id: 'past-year', label: 'Tutorial & PSPM', shortLabel: 'Tutorial/PSPM', icon: GraduationCap, category: 'core' },
   ];
 
-  // Mastery, AI & Review tabs (Row 2) - explicitly featuring the user's requested tabs
+  // Mastery, AI & Review tabs (Row 2)
   const toolsNavItems: NavItem[] = [
     { id: 'pitfalls', label: 'PopGen Pitfalls', shortLabel: 'Pitfalls', icon: AlertTriangle, category: 'tools' },
     { id: 'exit-ticket', label: 'Exit Ticket', shortLabel: 'Exit Ticket', icon: Target, badge: 'Game', badgeClass: 'bg-amber-400 text-purple-950 font-extrabold', category: 'tools' },
-    { id: 'ai-help', label: 'AI Help Desk', shortLabel: 'AI Help', icon: Bot, badge: 'AI', badgeClass: 'bg-emerald-400 text-emerald-950 font-extrabold', category: 'tools' },
+    { id: 'genaide-tutor', label: 'GenAIde Tutor', shortLabel: 'GenAIde Tutor', icon: Sparkles, badge: 'AI', badgeClass: 'bg-emerald-400 text-emerald-950 font-extrabold', category: 'tools' },
     { id: 'notes', label: 'Notes & Flashcards', shortLabel: 'Notes/Cards', icon: FileText, badge: 'Cards', badgeClass: 'bg-cyan-300 text-cyan-950 font-bold', category: 'tools' },
     { id: 'progress', label: 'My Progress', shortLabel: 'Progress', icon: BarChart3, badge: 'Stats', badgeClass: 'bg-rose-300 text-rose-950 font-bold', category: 'tools' },
   ];

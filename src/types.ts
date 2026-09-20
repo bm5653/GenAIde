@@ -6,9 +6,18 @@ export type TabType =
   | 'past-year'
   | 'pitfalls'
   | 'exit-ticket'
-  | 'ai-help'
+  | 'genaide-tutor'
   | 'notes'
   | 'progress';
+
+export interface ChatMessage {
+  id: string;
+  sender: 'user' | 'bot';
+  text: string;
+  time: string;
+  imageUrl?: string;
+  isError?: boolean;
+}
 
 export interface StepItem {
   stepNumber: number;
