@@ -119,9 +119,20 @@ export default function App() {
             <PopGenToolboxView />
           )}
 
-          {(activeTab === 'past-year' || activeTab === 'practice') && (
-            <PastYearView
-              completedQuestions={userProgress.completedQuestions}
+          {activeTab === 'practice' && (
+            <PracticeView
+              initialQuestionId={solverTargetQuestionId}
+              userProgress={userProgress}
+              onUpdateProgress={handleUpdateProgress}
+            />
+          )}
+
+          {activeTab === 'past-year' && (
+            <PracticeView
+              initialQuestionId={solverTargetQuestionId}
+              initialMode="bank"
+              userProgress={userProgress}
+              onUpdateProgress={handleUpdateProgress}
             />
           )}
 
