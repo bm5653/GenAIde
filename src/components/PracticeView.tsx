@@ -1,9 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ALL_QUESTIONS } from '../data/questionsData';
 import { ADDITIONAL_QUESTIONS } from '../data/pastYearAdditionalQuestions';
 import { QuestionData, StepItem, UserProgress } from '../types';
 import { MathToolbox } from './MathToolbox';
 import { PastYearView } from './PastYearView';
+import { getSavedQuestionState, saveQuestionState, clearQuestionState } from '../utils/questionProgress';
 import confetti from 'canvas-confetti';
 import { 
   PenTool, 
@@ -85,15 +86,34 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
     return true;
   });
 
+  // Auto-restore saved progress whenever selected question changes or progress event updates
+  useEffect(() => {
+    const loadState = (qId: string) => {
+      const saved = getSavedQuestionState(qId);
+      setUserInputs(saved.userInputs || {});
+      setStepFeedback((saved.stepFeedback as any) || {});
+      setCurrentStepIndex(saved.currentStepIndex || 0);
+      setIsQuestionFinished(!!saved.isQuestionFinished);
+      setDetectorAnswered(!!saved.detectorAnswered);
+      setDetectorSelectedIdx(saved.detectorSelectedIdx ?? null);
+      setShowFullMarkScheme(!!saved.isQuestionFinished);
+    };
+
+    loadState(selectedQuestionId);
+
+    const handleProgressUpdate = (e: any) => {
+      const qId = e.detail?.qId;
+      if (qId === selectedQuestionId) {
+        loadState(selectedQuestionId);
+      }
+    };
+
+    window.addEventListener('genaide_question_progress_updated', handleProgressUpdate);
+    return () => window.removeEventListener('genaide_question_progress_updated', handleProgressUpdate);
+  }, [selectedQuestionId]);
+
   const handleSelectQuestion = (qId: string) => {
     setSelectedQuestionId(qId);
-    setDetectorAnswered(false);
-    setDetectorSelectedIdx(null);
-    setCurrentStepIndex(0);
-    setUserInputs({});
-    setStepFeedback({});
-    setIsQuestionFinished(false);
-    setShowFullMarkScheme(false);
   };
 
   // Helper to retrieve official description and symbol pairing
@@ -409,7 +429,17 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
   const handleInsertSymbolToStep = (stepNumber: number, sym: string) => {
     setUserInputs(prev => {
       const cur = prev[stepNumber] || '';
-      return { ...prev, [stepNumber]: cur + (cur.endsWith(' ') || cur === '' ? '' : ' ') + sym };
+      const nextVal = cur + (cur.endsWith(' ') || cur === '' ? '' : ' ') + sym;
+      const nextInputs = { ...prev, [stepNumber]: nextVal };
+      saveQuestionState(selectedQuestionId, {
+        userInputs: nextInputs,
+        stepFeedback,
+        currentStepIndex,
+        isQuestionFinished,
+        detectorAnswered,
+        detectorSelectedIdx
+      });
+      return nextInputs;
     });
     if (activeInputRef.current) {
       activeInputRef.current.focus();
@@ -419,7 +449,17 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
   const handleInsertTextToStep = (stepNumber: number, text: string) => {
     setUserInputs(prev => {
       const cur = prev[stepNumber] || '';
-      return { ...prev, [stepNumber]: cur + (cur.endsWith(' ') || cur === '' ? '' : ' ') + text };
+      const nextVal = cur + (cur.endsWith(' ') || cur === '' ? '' : ' ') + text;
+      const nextInputs = { ...prev, [stepNumber]: nextVal };
+      saveQuestionState(selectedQuestionId, {
+        userInputs: nextInputs,
+        stepFeedback,
+        currentStepIndex,
+        isQuestionFinished,
+        detectorAnswered,
+        detectorSelectedIdx
+      });
+      return nextInputs;
     });
     if (activeInputRef.current) {
       activeInputRef.current.focus();
@@ -428,12 +468,53 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
 
   const handleInsertScaffoldToStep = (step: StepItem) => {
     const scaffold = getStepScaffold(step);
-    setUserInputs(prev => ({
-      ...prev,
-      [step.stepNumber]: scaffold
-    }));
+    setUserInputs(prev => {
+      const nextInputs = { ...prev, [step.stepNumber]: scaffold };
+      saveQuestionState(selectedQuestionId, {
+        userInputs: nextInputs,
+        stepFeedback,
+        currentStepIndex,
+        isQuestionFinished,
+        detectorAnswered,
+        detectorSelectedIdx
+      });
+      return nextInputs;
+    });
     if (activeInputRef.current) {
       activeInputRef.current.focus();
+    }
+  };
+
+  const handleInputChange = (stepNumber: number, val: string) => {
+    setUserInputs(prev => {
+      const nextInputs = { ...prev, [stepNumber]: val };
+      saveQuestionState(selectedQuestionId, {
+        userInputs: nextInputs,
+        stepFeedback,
+        currentStepIndex,
+        isQuestionFinished,
+        detectorAnswered,
+        detectorSelectedIdx
+      });
+      return nextInputs;
+    });
+
+    if (stepFeedback[stepNumber]?.showIncorrectBanner) {
+      setStepFeedback(prev => {
+        const nextFb = {
+          ...prev,
+          [stepNumber]: { ...prev[stepNumber], showIncorrectBanner: false }
+        };
+        saveQuestionState(selectedQuestionId, {
+          userInputs,
+          stepFeedback: nextFb,
+          currentStepIndex,
+          isQuestionFinished,
+          detectorAnswered,
+          detectorSelectedIdx
+        });
+        return nextFb;
+      });
     }
   };
 
@@ -454,8 +535,8 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
       const isChoiceCorrect = chosenOpt ? chosenOpt.isCorrect : step.acceptedAnswers.some(ans => ans.toLowerCase() === rawVal.toLowerCase());
 
       if (isChoiceCorrect) {
-        setStepFeedback(prev => ({
-          ...prev,
+        const newFb = {
+          ...stepFeedback,
           [step.stepNumber]: {
             isCorrect: true,
             isBareAnswerWarning: false,
@@ -463,14 +544,23 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
             feedbackText: chosenOpt?.feedback || `✓ Correct Conclusion! [${step.marks || 1} ${step.marks === 1 ? 'mark' : 'marks'}]`,
             showExplanation: true,
             attempts: currentAttempt,
-            activeHintLevel: prev[step.stepNumber]?.activeHintLevel || 0,
+            activeHintLevel: stepFeedback[step.stepNumber]?.activeHintLevel || 0,
             showIncorrectBanner: false
           }
-        }));
+        };
+        setStepFeedback(newFb);
 
         // If last step completed
         if (currentStepIndex === currentQuestion.steps.length - 1) {
           setIsQuestionFinished(true);
+          saveQuestionState(selectedQuestionId, {
+            userInputs,
+            stepFeedback: newFb,
+            currentStepIndex,
+            isQuestionFinished: true,
+            detectorAnswered,
+            detectorSelectedIdx
+          });
           try {
             confetti({
               particleCount: 80,
@@ -480,11 +570,20 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
           } catch {}
           onUpdateProgress(currentQuestion.id, currentQuestion.totalMarks, true);
         } else {
-          setCurrentStepIndex(prev => prev + 1);
+          const nextIdx = currentStepIndex + 1;
+          setCurrentStepIndex(nextIdx);
+          saveQuestionState(selectedQuestionId, {
+            userInputs,
+            stepFeedback: newFb,
+            currentStepIndex: nextIdx,
+            isQuestionFinished: false,
+            detectorAnswered,
+            detectorSelectedIdx
+          });
         }
       } else {
-        setStepFeedback(prev => ({
-          ...prev,
+        const newFb = {
+          ...stepFeedback,
           [step.stepNumber]: {
             isCorrect: false,
             isBareAnswerWarning: false,
@@ -492,10 +591,19 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
             feedbackText: chosenOpt?.feedback || "✗ Incorrect conclusion! Please review allele frequency changes between 1995 and 2005.",
             showExplanation: false,
             attempts: currentAttempt,
-            activeHintLevel: prev[step.stepNumber]?.activeHintLevel || 0,
+            activeHintLevel: stepFeedback[step.stepNumber]?.activeHintLevel || 0,
             showIncorrectBanner: true
           }
-        }));
+        };
+        setStepFeedback(newFb);
+        saveQuestionState(selectedQuestionId, {
+          userInputs,
+          stepFeedback: newFb,
+          currentStepIndex,
+          isQuestionFinished,
+          detectorAnswered,
+          detectorSelectedIdx
+        });
       }
       return;
     }
@@ -504,8 +612,8 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
     // They are NOT allowed to give only their answers. They must show the steps with the description of the symbol first.
     if (isNumericStep && isBareAnswerOnly(rawVal, isNumericStep)) {
       const example = getExampleStepText(step);
-      setStepFeedback(prev => ({
-        ...prev,
+      const newFb = {
+        ...stepFeedback,
         [step.stepNumber]: {
           isCorrect: false,
           isBareAnswerWarning: true,
@@ -513,10 +621,19 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
           feedbackText: `⚠️ Working Step with Description Required: You are NOT allowed to give only the final bare answer ("${rawVal}"). In Matriculation Biology examination standard, all symbols must be written with their description first in the calculation (e.g. "${example}").`,
           showExplanation: currentAttempt >= 3,
           attempts: currentAttempt,
-          activeHintLevel: prev[step.stepNumber]?.activeHintLevel || 0,
+          activeHintLevel: stepFeedback[step.stepNumber]?.activeHintLevel || 0,
           showIncorrectBanner: false
         }
-      }));
+      };
+      setStepFeedback(newFb);
+      saveQuestionState(selectedQuestionId, {
+        userInputs,
+        stepFeedback: newFb,
+        currentStepIndex,
+        isQuestionFinished,
+        detectorAnswered,
+        detectorSelectedIdx
+      });
       return;
     }
 
@@ -531,34 +648,23 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
     const cleanCandidate = candidate.toLowerCase();
     const cleanRaw = rawVal.toLowerCase().trim();
 
-    // Helper to count decimal places in a string
-    const countDecimals = (str: string): number => {
-      const match = str.match(/\.(\d+)/);
-      return match ? match[1].length : 0;
-    };
-
     // Strict equality check against the official mark scheme:
-    // Every answer typed in must be exactly the same as in the answer scheme.
     const exactMatch = step.acceptedAnswers.some(ans => {
       const a = ans.trim().toLowerCase();
       const c = cleanCandidate;
       const r = cleanRaw;
 
-      // Direct exact match of candidate or entire string
       if (c === a || r === a) return true;
-      // Exact match without whitespace (e.g. "900 insects" vs "900insects", "4,050" vs "4050")
       if (c.replace(/[\s,]+/g, '') === a.replace(/[\s,]+/g, '')) return true;
-      // Allow percentage symbol or number if accepted answer includes %
       if (a.endsWith('%') && (c === a || c + '%' === a || c === a.replace('%', ''))) return true;
-      // Conceptual text match: if key phrase is included in full student response
       if (!isNumericStep && (r.includes(a) || r.replace(/\s+/g, '').includes(a.replace(/\s+/g, '')))) return true;
       return false;
     });
 
     if (exactMatch) {
       // Correct step calculation verified against the official answer scheme!
-      setStepFeedback(prev => ({
-        ...prev,
+      const newFb = {
+        ...stepFeedback,
         [step.stepNumber]: {
           isCorrect: true,
           isBareAnswerWarning: false,
@@ -566,14 +672,23 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
           feedbackText: `✓ Correct Step! Well done! [${step.marks || 1} ${step.marks === 1 ? 'mark' : 'marks'}]`,
           showExplanation: true,
           attempts: currentAttempt,
-          activeHintLevel: prev[step.stepNumber]?.activeHintLevel || 0,
+          activeHintLevel: stepFeedback[step.stepNumber]?.activeHintLevel || 0,
           showIncorrectBanner: false
         }
-      }));
+      };
+      setStepFeedback(newFb);
 
       // If last step completed
       if (currentStepIndex === currentQuestion.steps.length - 1) {
         setIsQuestionFinished(true);
+        saveQuestionState(selectedQuestionId, {
+          userInputs,
+          stepFeedback: newFb,
+          currentStepIndex,
+          isQuestionFinished: true,
+          detectorAnswered,
+          detectorSelectedIdx
+        });
         try {
           confetti({
             particleCount: 80,
@@ -584,13 +699,21 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
         onUpdateProgress(currentQuestion.id, currentQuestion.totalMarks, true);
       } else {
         // Unlock next step
-        setCurrentStepIndex(prev => prev + 1);
+        const nextIdx = currentStepIndex + 1;
+        setCurrentStepIndex(nextIdx);
+        saveQuestionState(selectedQuestionId, {
+          userInputs,
+          stepFeedback: newFb,
+          currentStepIndex: nextIdx,
+          isQuestionFinished: false,
+          detectorAnswered,
+          detectorSelectedIdx
+        });
       }
     } else {
       // Answer does NOT match the answer scheme.
-      // Do NOT reveal the official answer. Only mention "✗ Incorrect! Please check your answers/steps."
-      setStepFeedback(prev => ({
-        ...prev,
+      const newFb = {
+        ...stepFeedback,
         [step.stepNumber]: {
           isCorrect: false,
           isBareAnswerWarning: false,
@@ -598,10 +721,19 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
           feedbackText: "✗ Incorrect! Please check your answers/steps.",
           showExplanation: false,
           attempts: currentAttempt,
-          activeHintLevel: prev[step.stepNumber]?.activeHintLevel || 0,
+          activeHintLevel: stepFeedback[step.stepNumber]?.activeHintLevel || 0,
           showIncorrectBanner: true
         }
-      }));
+      };
+      setStepFeedback(newFb);
+      saveQuestionState(selectedQuestionId, {
+        userInputs,
+        stepFeedback: newFb,
+        currentStepIndex,
+        isQuestionFinished,
+        detectorAnswered,
+        detectorSelectedIdx
+      });
     }
   };
 
@@ -615,18 +747,25 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
         activeHintLevel: 0,
         showIncorrectBanner: false
       };
-      return {
+      const newFb = {
         ...prev,
         [stepNumber]: {
           ...cur,
-          // When students click on hint, do NOT let the incorrect description pop up.
-          // Only provide guidance when students click on hint.
           showIncorrectBanner: false,
           feedbackText: cur.isCorrect ? cur.feedbackText : '',
           isBareAnswerWarning: false,
           activeHintLevel: Math.min(3, cur.activeHintLevel + 1)
         }
       };
+      saveQuestionState(selectedQuestionId, {
+        userInputs,
+        stepFeedback: newFb,
+        currentStepIndex,
+        isQuestionFinished,
+        detectorAnswered,
+        detectorSelectedIdx
+      });
+      return newFb;
     });
   };
 
@@ -890,6 +1029,14 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
                     onClick={() => {
                       setDetectorSelectedIdx(idx);
                       setDetectorAnswered(true);
+                      saveQuestionState(selectedQuestionId, {
+                        userInputs,
+                        stepFeedback,
+                        currentStepIndex,
+                        isQuestionFinished,
+                        detectorAnswered: true,
+                        detectorSelectedIdx: idx
+                      });
                     }}
                     className={`w-full p-3 rounded-xl text-xs font-semibold text-left border transition-all flex items-start gap-2.5 ${
                       isPicked
@@ -1178,16 +1325,7 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
                                   ref={isCurrentActive ? activeInputRef : undefined}
                                   type="text"
                                   value={userInputs[step.stepNumber] || ''}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    setUserInputs(prev => ({ ...prev, [step.stepNumber]: val }));
-                                    if (fb?.showIncorrectBanner) {
-                                      setStepFeedback(prevFeedback => ({
-                                        ...prevFeedback,
-                                        [step.stepNumber]: { ...prevFeedback[step.stepNumber], showIncorrectBanner: false }
-                                      }));
-                                    }
-                                  }}
+                                  onChange={(e) => handleInputChange(step.stepNumber, e.target.value)}
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter') checkStep(step);
                                   }}
@@ -1320,18 +1458,27 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                   <button
-                    onClick={() => handleSelectQuestion(currentQuestion.id)}
-                    className="px-3.5 py-2 rounded-xl bg-purple-800 hover:bg-purple-700 text-purple-200 text-xs font-semibold flex items-center gap-1"
+                    onClick={() => {
+                      clearQuestionState(currentQuestion.id);
+                      setUserInputs({});
+                      setStepFeedback({});
+                      setCurrentStepIndex(0);
+                      setIsQuestionFinished(false);
+                      setDetectorAnswered(false);
+                      setDetectorSelectedIdx(null);
+                      setShowFullMarkScheme(false);
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-purple-800 hover:bg-purple-700 text-purple-200 text-xs font-semibold flex items-center gap-1 cursor-pointer"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>Try Again</span>
                   </button>
                   <button
                     onClick={() => setShowFullMarkScheme(prev => !prev)}
-                    className="px-3.5 py-2 rounded-xl bg-purple-950/90 hover:bg-purple-950 text-amber-300 text-xs font-bold flex items-center gap-1.5 border border-purple-600 shadow-xs"
+                    className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-purple-950 text-xs font-extrabold flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95 transition-all"
                   >
-                    <FileCheck className="w-3.5 h-3.5 text-amber-300" />
-                    <span>{showFullMarkScheme ? 'Hide Complete Official Scheme' : 'View Complete Official Scheme'}</span>
+                    <FileCheck className="w-3.5 h-3.5" />
+                    <span>✓ UNLOCKED — {showFullMarkScheme ? 'Hide Official Scheme' : 'View Official Mark Scheme & Allocation'}</span>
                   </button>
                 </div>
               </div>

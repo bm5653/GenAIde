@@ -195,9 +195,7 @@ export default function App() {
               <span className="text-purple-700 hidden sm:inline">•</span>
               <button onClick={() => handleTabChange('toolbox')} className="hover:text-white transition-colors cursor-pointer">Toolbox</button>
               <span className="text-purple-700 hidden sm:inline">•</span>
-              <button onClick={() => handleTabChange('practice')} className="hover:text-white transition-colors cursor-pointer">Solver</button>
-              <span className="text-purple-700 hidden sm:inline">•</span>
-              <button onClick={() => handleTabChange('past-year')} className="hover:text-white transition-colors cursor-pointer">Past Year</button>
+              <button onClick={() => handleTabChange('practice')} className="hover:text-white transition-colors cursor-pointer">Step Solver &amp; Question Bank</button>
               <span className="text-purple-700 hidden sm:inline">•</span>
               <button onClick={() => handleTabChange('pitfalls')} className="hover:text-white transition-colors cursor-pointer">Pitfalls</button>
               <span className="text-purple-700 hidden sm:inline">•</span>

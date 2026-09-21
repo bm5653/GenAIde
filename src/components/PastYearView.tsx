@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ALL_QUESTIONS } from '../data/questionsData';
 import { ADDITIONAL_QUESTIONS } from '../data/pastYearAdditionalQuestions';
 import { QuestionData, StepItem } from '../types';
+import { getSavedQuestionState, saveQuestionState } from '../utils/questionProgress';
 import confetti from 'canvas-confetti';
 import { 
   GraduationCap, 
@@ -72,24 +73,58 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
     }));
   };
 
+  // Listen for progress updates across components/tabs
+  useEffect(() => {
+    const handleProgressUpdate = (e: any) => {
+      const qId = e.detail?.qId;
+      if (qId && activeInlineSolverId === qId) {
+        const saved = getSavedQuestionState(qId);
+        setInlineInputs(saved.userInputs);
+        setInlineFeedback(saved.stepFeedback as any);
+        setInlineStepIndex(saved.currentStepIndex);
+      }
+    };
+    window.addEventListener('genaide_question_progress_updated', handleProgressUpdate);
+    return () => window.removeEventListener('genaide_question_progress_updated', handleProgressUpdate);
+  }, [activeInlineSolverId]);
+
   const handleOpenInlineSolver = (qId: string) => {
     if (activeInlineSolverId === qId) {
       setActiveInlineSolverId(null);
       return;
     }
     setActiveInlineSolverId(qId);
-    setInlineStepIndex(0);
-    setInlineInputs({});
-    setInlineFeedback({});
+    const saved = getSavedQuestionState(qId);
+    setInlineInputs(saved.userInputs || {});
+    setInlineFeedback((saved.stepFeedback as any) || {});
+    setInlineStepIndex(saved.currentStepIndex || 0);
   };
 
-  const handleInsertSymbol = (stepNum: number, symbol: string) => {
+  const handleInlineInputChange = (qId: string, stepNum: number, value: string) => {
+    setInlineInputs(prev => {
+      const next = { ...prev, [stepNum]: value };
+      saveQuestionState(qId, {
+        userInputs: next,
+        stepFeedback: inlineFeedback,
+        currentStepIndex: inlineStepIndex,
+        isQuestionFinished: solvedQuestionIds.has(qId)
+      });
+      return next;
+    });
+  };
+
+  const handleInsertSymbol = (qId: string, stepNum: number, symbol: string) => {
     setInlineInputs(prev => {
       const current = prev[stepNum] || '';
-      return {
-        ...prev,
-        [stepNum]: current + (current.endsWith(' ') || current === '' ? '' : ' ') + symbol
-      };
+      const updated = current + (current.endsWith(' ') || current === '' ? '' : ' ') + symbol;
+      const next = { ...prev, [stepNum]: updated };
+      saveQuestionState(qId, {
+        userInputs: next,
+        stepFeedback: inlineFeedback,
+        currentStepIndex: inlineStepIndex,
+        isQuestionFinished: solvedQuestionIds.has(qId)
+      });
+      return next;
     });
   };
 
@@ -103,14 +138,21 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
     if (isNumericStep) {
       const isBare = /^[+-]?(?:\d*\.)?\d+%?$/.test(rawInput);
       if (isBare) {
-        setInlineFeedback(prev => ({
-          ...prev,
+        const newFb = {
+          ...inlineFeedback,
           [step.stepNumber]: {
             isCorrect: false,
             isBareWarning: true,
             feedbackText: "⚠️ Include your working formula & substitution before the final value! e.g. q² = 4/5000 = 0.0008"
           }
-        }));
+        };
+        setInlineFeedback(newFb);
+        saveQuestionState(q.id, {
+          userInputs: inlineInputs,
+          stepFeedback: newFb,
+          currentStepIndex: inlineStepIndex,
+          isQuestionFinished: solvedQuestionIds.has(q.id)
+        });
         return;
       }
     }
@@ -141,41 +183,53 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
     }
 
     if (isCorrect) {
-      setInlineFeedback(prev => ({
-        ...prev,
+      const newFb = {
+        ...inlineFeedback,
         [step.stepNumber]: {
           isCorrect: true,
           feedbackText: `✓ Correct! [${step.marks || 1} ${step.marks === 1 ? 'mark' : 'marks'}]`
         }
-      }));
+      };
+      setInlineFeedback(newFb);
 
       // Check if last step
       if (inlineStepIndex === q.steps.length - 1) {
         setLocalCompleted(prev => Array.from(new Set([...prev, q.id])));
-        try {
-          const saved = localStorage.getItem('genaide_user_progress_v1');
-          let parsed = saved ? JSON.parse(saved) : { completedQuestions: [] };
-          if (!parsed.completedQuestions) parsed.completedQuestions = [];
-          if (!parsed.completedQuestions.includes(q.id)) {
-            parsed.completedQuestions.push(q.id);
-            localStorage.setItem('genaide_user_progress_v1', JSON.stringify(parsed));
-          }
-        } catch {}
+        saveQuestionState(q.id, {
+          userInputs: inlineInputs,
+          stepFeedback: newFb,
+          currentStepIndex: inlineStepIndex,
+          isQuestionFinished: true
+        });
         try {
           confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
         } catch {}
         setExpandedMarkSchemes(prev => ({ ...prev, [q.id]: true }));
       } else {
-        setInlineStepIndex(prev => prev + 1);
+        const nextIdx = inlineStepIndex + 1;
+        setInlineStepIndex(nextIdx);
+        saveQuestionState(q.id, {
+          userInputs: inlineInputs,
+          stepFeedback: newFb,
+          currentStepIndex: nextIdx,
+          isQuestionFinished: false
+        });
       }
     } else {
-      setInlineFeedback(prev => ({
-        ...prev,
+      const newFb = {
+        ...inlineFeedback,
         [step.stepNumber]: {
           isCorrect: false,
           feedbackText: `✗ Re-check your calculation for ${step.expectedConcept}.`
         }
-      }));
+      };
+      setInlineFeedback(newFb);
+      saveQuestionState(q.id, {
+        userInputs: inlineInputs,
+        stepFeedback: newFb,
+        currentStepIndex: inlineStepIndex,
+        isQuestionFinished: solvedQuestionIds.has(q.id)
+      });
     }
   };
 
@@ -385,7 +439,7 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
                                 <button
                                   key={sym}
                                   type="button"
-                                  onClick={() => handleInsertSymbol(step.stepNumber, sym)}
+                                  onClick={() => handleInsertSymbol(q.id, step.stepNumber, sym)}
                                   className="px-2 py-1 bg-purple-100 hover:bg-purple-200 text-purple-950 font-mono font-bold text-xs rounded border border-purple-300 active:scale-95 transition-transform cursor-pointer"
                                 >
                                   {sym}
@@ -398,7 +452,7 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
                               <input
                                 type="text"
                                 value={inlineInputs[step.stepNumber] || ''}
-                                onChange={(e) => setInlineInputs({ ...inlineInputs, [step.stepNumber]: e.target.value })}
+                                onChange={(e) => handleInlineInputChange(q.id, step.stepNumber, e.target.value)}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') handleCheckInlineStep(q, step);
                                 }}
@@ -452,34 +506,55 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
                 </div>
               )}
 
-              {/* Official Mark Scheme Toggle Button */}
+              {/* Official Mark Scheme Toggle Section */}
               <div className="pt-1 space-y-2">
-                <button
-                  onClick={() => toggleMarkScheme(q.id)}
-                  className="w-full py-2.5 px-3.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-950 border border-purple-300 font-bold text-xs flex items-center justify-between transition-colors shadow-2xs cursor-pointer"
-                >
-                  <span className="flex items-center gap-2">
-                    <FileCheck className="w-4 h-4 text-purple-700" />
-                    <span>{isExpanded ? 'Hide Official Mark Scheme & Allocation' : 'View Official Mark Scheme & Allocation'}</span>
-                  </span>
-                  {isExpanded ? <ChevronUp className="w-4 h-4 text-purple-800" /> : <ChevronDown className="w-4 h-4 text-purple-800" />}
-                </button>
-
-                {/* Collapsible Mark Scheme */}
-                {isExpanded && (
-                  <div className="p-4 rounded-xl bg-purple-950 text-white text-xs font-mono space-y-2 animate-in slide-in-from-top-2 duration-150 border border-purple-800 shadow-md">
-                    <div className="font-bold text-amber-300 border-b border-purple-800 pb-1 flex justify-between">
-                      <span className="flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Official Marking Points & Allocations</span>
+                {isSolved ? (
+                  <>
+                    <button
+                      onClick={() => toggleMarkScheme(q.id)}
+                      className="w-full py-2.5 px-3.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-950 border-2 border-emerald-300 font-bold text-xs flex items-center justify-between transition-colors shadow-2xs cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">
+                        <FileCheck className="w-4 h-4 text-emerald-700" />
+                        <span className="font-black text-emerald-900">✓ UNLOCKED</span>
+                        <span>— {isExpanded ? 'Hide Official Mark Scheme & Allocation' : 'View Official Mark Scheme & Allocation'}</span>
                       </span>
-                      <span>Total: {q.totalMarks} Marks</span>
-                    </div>
-                    {q.officialAnswerScheme.map((item, idx) => (
-                      <div key={idx} className="p-2 rounded bg-purple-900/60 border border-purple-800/80 leading-relaxed text-purple-100">
-                        {item}
+                      {isExpanded ? <ChevronUp className="w-4 h-4 text-emerald-800" /> : <ChevronDown className="w-4 h-4 text-emerald-800" />}
+                    </button>
+
+                    {/* Collapsible Mark Scheme */}
+                    {isExpanded && (
+                      <div className="p-4 rounded-xl bg-purple-950 text-white text-xs font-mono space-y-2 animate-in slide-in-from-top-2 duration-150 border border-purple-800 shadow-md">
+                        <div className="font-bold text-amber-300 border-b border-purple-800 pb-1 flex justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>Official Marking Points & Allocations</span>
+                          </span>
+                          <span>Total: {q.totalMarks} Marks</span>
+                        </div>
+                        {q.officialAnswerScheme.map((item, idx) => (
+                          <div key={idx} className="p-2 rounded bg-purple-900/60 border border-purple-800/80 leading-relaxed text-purple-100">
+                            {item}
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
+                  </>
+                ) : (
+                  <div className="p-3 bg-purple-50/80 border border-purple-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-purple-950">
+                      <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>
+                        <strong>Mark Scheme Locked:</strong> Complete this question in the Interactive Step Solver to unlock the official answer scheme and mark allocations.
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleOpenInlineSolver(q.id)}
+                      className="px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-purple-950 font-extrabold text-xs shrink-0 shadow-2xs flex items-center gap-1 transition-all cursor-pointer active:scale-95"
+                    >
+                      <PenTool className="w-3.5 h-3.5" />
+                      <span>Solve to Unlock</span>
+                    </button>
                   </div>
                 )}
               </div>

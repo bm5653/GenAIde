@@ -73,12 +73,12 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               STEP SOLVER & QUESTION BANK
             </button>
             <button
-              onClick={() => onNavigate('past-year')}
+              onClick={() => onNavigate('practice')}
               id="home-btn-past-year"
               className="px-5 py-2.5 rounded-xl bg-purple-900/90 hover:bg-purple-800 text-purple-100 font-semibold text-sm border border-purple-600 transition-all flex items-center gap-2 active:scale-95 cursor-pointer"
             >
               <GraduationCap className="w-4 h-4 text-purple-300" />
-              TUTORIAL & PSPM MARK SCHEMES
+              TUTORIAL & PSPM QUESTION BANK
             </button>
             <button
               onClick={() => onNavigate('exit-ticket')}
