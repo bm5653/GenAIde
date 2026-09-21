@@ -573,18 +573,37 @@ The ultimate goal is:
         data = matches[2];
       }
 
-      const prompt = `You are an OCR and document transcription specialist for Biology students (Matriculation SB015 Chapter 5 Population Genetics & General Biology).
+      const prompt = `You are an expert Biology OCR and document transcription specialist for Malaysian Matriculation SB015 Biology (Chapter 5: Population Genetics).
 
 Task:
-Extract and transcribe the exact text of the question shown in this camera photo / image.
+Carefully extract and transcribe the text from this question / student working image with extreme accuracy.
 
-Guidelines:
-1. Extract the full question prompt, including introductory text, numbers, given data, percentages, and sub-questions (e.g., (a), (b), (i), (ii)).
-2. Transcribe mathematical and biological notation accurately (such as p, q, p², 2pq, q², genotypes like AA, Aa, aa, frequency values, and formulas).
-3. If there are multiple-choice options (A, B, C, D) or tables, transcribe them cleanly.
-4. Do NOT solve or answer the question. Only output the extracted question text as written.
-5. If some parts are slightly blurry or handwritten, use your best context inference to produce clear, readable text.
-6. Return only the extracted text without introductory chat phrases.`;
+CRITICAL TRANSCRIPTION RULES:
+1. PRESERVE SUPERSCRIPTS & NOTATIONS:
+   - Always use proper superscripts for alleles and genotypes (e.g., q², p², 2pq, Iᴬ, Iᴮ, Xʰ).
+   - NEVER convert q² to q2, or p² to p2, or 2pq to 2p.
+2. PRESERVE MATHEMATICAL SYMBOLS:
+   - Preserve √, =, ≥, ≤, %, −, ×, ÷, ± accurately.
+3. PRESERVE FRACTIONS & DECIMALS:
+   - Keep fractions intact with full numerator and denominator (e.g. 30/150 must not become 30/15).
+   - Preserve decimal points (e.g. 0.25 must not become 25 or 025).
+4. BIOLOGICAL TERMINOLOGY:
+   - Preserve terms: homozygous, heterozygous, dominant, recessive, allele, genotype, phenotype, Hardy-Weinberg, population, frequency, mutation, migration, natural selection, genetic drift.
+5. DIAGRAMS & TABLES:
+   - If there is a table or Punnett square, format it cleanly with ASCII/markdown columns or row lines.
+   - If there is a genetic diagram or graph whose labels or arrows cannot be transcribed purely in text, add a short note at the end: "[Note: Image contains a diagram/chart. Uploading original image to your AI platform is recommended for diagram analysis.]"
+6. DO NOT SOLVE:
+   - Transcribe only what is written in the image. Do NOT solve or generate answers.
+7. CONFIDENCE:
+   - If parts are blurry, torn, cropped, or ambiguous, transcribe what is readable and do not guess missing numbers.
+
+Return a JSON object with:
+{
+  "extractedText": "full transcribed question/working text",
+  "confidence": "high" | "medium" | "low",
+  "hasDiagram": true | false,
+  "warningNote": "optional warning if text was blurry, cropped, or contains complex diagrams, else null"
+}`;
 
       const response = await ai.models.generateContent({
         model: 'gemini-3.8-flash',
@@ -604,11 +623,28 @@ Guidelines:
         ],
         config: {
           temperature: 0.1,
+          responseMimeType: "application/json"
         }
       });
 
-      const extractedText = response.text?.trim() || "";
-      res.json({ extractedText });
+      const responseText = response.text?.trim() || "{}";
+      try {
+        const parsed = JSON.parse(responseText);
+        res.json({
+          extractedText: parsed.extractedText || "",
+          confidence: parsed.confidence || "high",
+          hasDiagram: Boolean(parsed.hasDiagram),
+          warningNote: parsed.warningNote || null
+        });
+      } catch (parseErr) {
+        // Fallback if not pure JSON
+        res.json({ 
+          extractedText: responseText.replace(/```json|```/g, '').trim(),
+          confidence: "medium",
+          hasDiagram: false,
+          warningNote: null
+        });
+      }
     } catch (err: any) {
       console.error("Scan question error:", err);
       res.status(500).json({ error: err.message || "Failed to scan text from image" });
