@@ -70,7 +70,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               className="px-5 py-2.5 rounded-xl bg-white hover:bg-purple-50 text-purple-950 font-bold text-sm shadow-md transition-all flex items-center gap-2 active:scale-95 cursor-pointer"
             >
               <PenTool className="w-4 h-4 text-purple-700" />
-              STEP SOLVER & QUESTION BANK
+              STEP SOLVER &amp; QUESTION BANK
             </button>
             <button
               onClick={() => onNavigate('practice')}
@@ -78,7 +78,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               className="px-5 py-2.5 rounded-xl bg-purple-900/90 hover:bg-purple-800 text-purple-100 font-semibold text-sm border border-purple-600 transition-all flex items-center gap-2 active:scale-95 cursor-pointer"
             >
               <GraduationCap className="w-4 h-4 text-purple-300" />
-              TUTORIAL & PSPM QUESTION BANK
+              TUTORIAL &amp; PSPM QUESTION BANK
             </button>
             <button
               onClick={() => onNavigate('exit-ticket')}
