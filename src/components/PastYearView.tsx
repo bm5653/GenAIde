@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { ALL_QUESTIONS } from '../data/questionsData';
 import { ADDITIONAL_QUESTIONS } from '../data/pastYearAdditionalQuestions';
 import { QuestionData } from '../types';
@@ -7,51 +7,25 @@ import {
   Search, 
   ChevronDown, 
   ChevronUp, 
-  Play, 
   FileCheck, 
   AlertTriangle,
-  Award,
-  BookOpen,
-  Filter,
-  Lock,
-  CheckCircle2
+  CheckCircle2,
+  Filter
 } from 'lucide-react';
 
 interface PastYearViewProps {
-  onLoadQuestionIntoSolver: (questionId: string) => void;
+  onLoadQuestionIntoSolver?: (questionId: string) => void;
   completedQuestions?: string[];
 }
 
-export const PastYearView: React.FC<PastYearViewProps> = ({ 
-  onLoadQuestionIntoSolver,
-  completedQuestions = []
-}) => {
+export const PastYearView: React.FC<PastYearViewProps> = () => {
   const allQuestions: QuestionData[] = [...ALL_QUESTIONS, ...ADDITIONAL_QUESTIONS];
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [expandedMarkSchemes, setExpandedMarkSchemes] = useState<Record<string, boolean>>({});
 
-  // Compute set of solved question IDs from props + persisted storage fallback
-  const solvedQuestionIds = useMemo(() => {
-    const set = new Set<string>(completedQuestions);
-    try {
-      const saved = localStorage.getItem('genaide_user_progress_v1');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed.completedQuestions)) {
-          parsed.completedQuestions.forEach((id: string) => set.add(id));
-        }
-      }
-    } catch {}
-    return set;
-  }, [completedQuestions]);
-
-  const solvedCount = allQuestions.filter(q => solvedQuestionIds.has(q.id)).length;
-
   const toggleMarkScheme = (qId: string) => {
-    // Only permit toggling if question is solved
-    if (!solvedQuestionIds.has(qId)) return;
     setExpandedMarkSchemes(prev => ({
       ...prev,
       [qId]: !prev[qId]
@@ -64,11 +38,7 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
                           q.number.toLowerCase().includes(searchQuery.toLowerCase());
     
     let matchesCategory = true;
-    if (selectedCategory === 'solved') {
-      matchesCategory = solvedQuestionIds.has(q.id);
-    } else if (selectedCategory === 'unsolved') {
-      matchesCategory = !solvedQuestionIds.has(q.id);
-    } else if (selectedCategory !== 'all') {
+    if (selectedCategory !== 'all') {
       matchesCategory = q.category === selectedCategory;
     }
 
@@ -86,16 +56,16 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
           </div>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 text-xs font-bold">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
-            <span>{solvedCount} of {allQuestions.length} Mark Schemes Unlocked</span>
+            <span>{allQuestions.length} Questions & Official Schemes</span>
           </div>
         </div>
 
         <h2 className="text-2xl sm:text-3xl font-black text-purple-950">
-          Tutorial and Past Year PSPM Questions & Authoritative Mark Schemes
+          Tutorial and Past Year PSPM Questions & Official Mark Schemes
         </h2>
         <p className="text-xs sm:text-sm text-purple-800">
           Official tutorial and past year PSPM examination questions directly extracted from the Biology Chapter 5 Question Bank. 
-          To promote active learning, <strong>official mark schemes & allocations are unlocked only after you solve the question</strong> in the Step Solver.
+          Explore questions, step-by-step formula breakdowns, examiner guidance, and official Matriculation mark allocations.
         </p>
 
         {/* Search & Filter Bar */}
@@ -119,8 +89,6 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
               className="p-2 rounded-xl border border-purple-200 text-xs font-semibold text-purple-950 bg-white"
             >
               <option value="all">All Questions ({allQuestions.length})</option>
-              <option value="solved">✓ Solved & Unlocked ({solvedCount})</option>
-              <option value="unsolved">🔒 Unsolved / Locked ({allQuestions.length - solvedCount})</option>
               <option value="gene-pool">Allele Counting / Gene Pool</option>
               <option value="hardy-weinberg">Standard Hardy-Weinberg</option>
               <option value="heterozygotes">Heterozygotes & Carriers</option>
@@ -134,8 +102,7 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
       {/* Questions List */}
       <div className="space-y-4">
         {filtered.map((q) => {
-          const isSolved = solvedQuestionIds.has(q.id);
-          const isExpanded = isSolved && !!expandedMarkSchemes[q.id];
+          const isExpanded = !!expandedMarkSchemes[q.id];
 
           return (
             <div
@@ -159,17 +126,6 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
                     }`}>
                       {q.isHardyWeinberg ? 'Hardy-Weinberg' : 'Gene Pool Counting'}
                     </span>
-                    {isSolved ? (
-                      <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                        <span>Solved</span>
-                      </span>
-                    ) : (
-                      <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200 flex items-center gap-1">
-                        <Lock className="w-2.5 h-2.5 text-purple-500" />
-                        <span>Scheme Locked</span>
-                      </span>
-                    )}
                   </div>
                   <h3 className="text-base sm:text-lg font-bold text-purple-950">
                     {q.title}
@@ -180,13 +136,6 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
                   <span className="text-xs font-bold text-purple-900 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-lg">
                     {q.totalMarks} Marks
                   </span>
-                  <button
-                    onClick={() => onLoadQuestionIntoSolver(q.id)}
-                    className="px-3.5 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs shadow-2xs flex items-center gap-1.5 active:scale-95 transition-transform"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-white" />
-                    <span>{isSolved ? 'Solve Again' : 'Solve in Engine'}</span>
-                  </button>
                 </div>
               </div>
 
@@ -203,62 +152,37 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
                 </div>
               </div>
 
-              {/* Mark Scheme Toggle Button (Only enabled after students solve the question) */}
-              {isSolved ? (
-                <div className="pt-1 space-y-2">
-                  <button
-                    onClick={() => toggleMarkScheme(q.id)}
-                    className="w-full py-2.5 px-3.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-950 border border-emerald-300 font-bold text-xs flex items-center justify-between transition-colors shadow-2xs"
-                  >
-                    <span className="flex items-center gap-2">
-                      <FileCheck className="w-4 h-4 text-emerald-700" />
-                      <span>{isExpanded ? 'Hide Official Answer Scheme' : 'View Official Mark Scheme & Allocation'}</span>
-                      <span className="text-[10px] font-extrabold bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-md flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-700" />
-                        <span>Unlocked</span>
-                      </span>
-                    </span>
-                    {isExpanded ? <ChevronUp className="w-4 h-4 text-emerald-800" /> : <ChevronDown className="w-4 h-4 text-emerald-800" />}
-                  </button>
+              {/* Official Mark Scheme Toggle Button */}
+              <div className="pt-1 space-y-2">
+                <button
+                  onClick={() => toggleMarkScheme(q.id)}
+                  className="w-full py-2.5 px-3.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-950 border border-purple-300 font-bold text-xs flex items-center justify-between transition-colors shadow-2xs cursor-pointer"
+                >
+                  <span className="flex items-center gap-2">
+                    <FileCheck className="w-4 h-4 text-purple-700" />
+                    <span>{isExpanded ? 'Hide Official Mark Scheme & Allocation' : 'View Official Mark Scheme & Allocation'}</span>
+                  </span>
+                  {isExpanded ? <ChevronUp className="w-4 h-4 text-purple-800" /> : <ChevronDown className="w-4 h-4 text-purple-800" />}
+                </button>
 
-                  {/* Collapsible Mark Scheme */}
-                  {isExpanded && (
-                    <div className="p-4 rounded-xl bg-purple-950 text-white text-xs font-mono space-y-2 animate-in slide-in-from-top-2 duration-150 border border-purple-800 shadow-md">
-                      <div className="font-bold text-amber-300 border-b border-purple-800 pb-1 flex justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>Official Marking Points & Allocations</span>
-                        </span>
-                        <span>Total: {q.totalMarks} Marks</span>
-                      </div>
-                      {q.officialAnswerScheme.map((item, idx) => (
-                        <div key={idx} className="p-2 rounded bg-purple-900/60 border border-purple-800/80 leading-relaxed text-purple-100">
-                          {item}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                /* Feature is hidden & locked under Examiner Guidance until students solve the question */
-                <div className="pt-1">
-                  <div className="w-full py-2.5 px-3.5 rounded-xl bg-purple-50/70 border border-dashed border-purple-300 text-purple-900 text-xs font-medium flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                    <span className="flex items-center gap-2">
-                      <Lock className="w-4 h-4 text-purple-600 shrink-0" />
-                      <span>
-                        <strong>Official Mark Scheme & Allocation Locked:</strong> Solve this question in the Step Solver first to unlock the official answer scheme and marks allocation.
+                {/* Collapsible Mark Scheme */}
+                {isExpanded && (
+                  <div className="p-4 rounded-xl bg-purple-950 text-white text-xs font-mono space-y-2 animate-in slide-in-from-top-2 duration-150 border border-purple-800 shadow-md">
+                    <div className="font-bold text-amber-300 border-b border-purple-800 pb-1 flex justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Official Marking Points & Allocations</span>
                       </span>
-                    </span>
-                    <button
-                      onClick={() => onLoadQuestionIntoSolver(q.id)}
-                      className="px-3 py-1.5 bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs rounded-lg shadow-2xs shrink-0 self-start sm:self-auto flex items-center gap-1.5 transition-all active:scale-95"
-                    >
-                      <Play className="w-3 h-3 fill-white" />
-                      <span>Solve to Unlock</span>
-                    </button>
+                      <span>Total: {q.totalMarks} Marks</span>
+                    </div>
+                    {q.officialAnswerScheme.map((item, idx) => (
+                      <div key={idx} className="p-2 rounded bg-purple-900/60 border border-purple-800/80 leading-relaxed text-purple-100">
+                        {item}
+                      </div>
+                    ))}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           );
         })}
@@ -273,3 +197,4 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
     </div>
   );
 };
+

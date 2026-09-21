@@ -41,8 +41,7 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
     { id: 'home', label: 'Home', icon: Home, category: 'core' },
     { id: 'learn', label: 'Learn Chapter 5', shortLabel: 'Learn Ch 5', icon: BookOpen, category: 'core' },
     { id: 'toolbox', label: 'PopGen Toolbox', shortLabel: 'Toolbox', icon: TableProperties, category: 'core' },
-    { id: 'practice', label: 'Step Solver', shortLabel: 'Solver', icon: PenTool, category: 'core' },
-    { id: 'past-year', label: 'Tutorial & PSPM', shortLabel: 'Tutorial/PSPM', icon: GraduationCap, category: 'core' },
+    { id: 'past-year', label: 'Tutorial & PSPM', shortLabel: 'Tutorial/PSPM', icon: GraduationCap, badge: 'Bank', badgeClass: 'bg-emerald-400 text-purple-950 font-extrabold', category: 'core' },
   ];
 
   // Mastery, AI & Review tabs (Row 2)

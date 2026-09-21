@@ -3,9 +3,11 @@ import { ALL_QUESTIONS } from '../data/questionsData';
 import { ADDITIONAL_QUESTIONS } from '../data/pastYearAdditionalQuestions';
 import { QuestionData, StepItem, UserProgress } from '../types';
 import { MathToolbox } from './MathToolbox';
+import { PastYearView } from './PastYearView';
 import confetti from 'canvas-confetti';
 import { 
   PenTool, 
+  GraduationCap,
   CheckCircle2, 
   Check,
   XCircle, 
@@ -26,17 +28,23 @@ import {
 
 interface PracticeViewProps {
   initialQuestionId?: string;
+  initialMode?: 'solver' | 'bank';
   userProgress: UserProgress;
   onUpdateProgress: (questionId: string, score: number, isComplete: boolean) => void;
 }
 
 export const PracticeView: React.FC<PracticeViewProps> = ({
   initialQuestionId,
+  initialMode,
   userProgress,
   onUpdateProgress
 }) => {
   // Combine core 8 questions + 3 additional deep past year questions
   const questions: QuestionData[] = [...ALL_QUESTIONS, ...ADDITIONAL_QUESTIONS];
+
+  const [activeSubTab, setActiveSubTab] = useState<'solver' | 'bank'>(
+    initialMode || 'solver'
+  );
 
   const [selectedQuestionId, setSelectedQuestionId] = useState<string>(
     initialQuestionId || questions[0].id
@@ -627,8 +635,69 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Top Banner & Question Selector */}
-      <div className="bg-white p-5 rounded-2xl border-2 border-purple-200 shadow-xs space-y-4">
+      {/* Unified Feature Mode Header: Step Solver & PSPM Question Bank */}
+      <div className="bg-white p-3 rounded-2xl border-2 border-purple-200 shadow-xs flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setActiveSubTab('solver')}
+            id="solver-subtab-solver"
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer ${
+              activeSubTab === 'solver'
+                ? 'bg-purple-800 text-white shadow-md'
+                : 'bg-purple-50 text-purple-900 hover:bg-purple-100 border border-purple-200'
+            }`}
+          >
+            <PenTool className="w-4 h-4 text-amber-300" />
+            <span>Interactive Step Solver</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('bank')}
+            id="solver-subtab-bank"
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer ${
+              activeSubTab === 'bank'
+                ? 'bg-purple-800 text-white shadow-md'
+                : 'bg-purple-50 text-purple-900 hover:bg-purple-100 border border-purple-200'
+            }`}
+          >
+            <GraduationCap className="w-4 h-4 text-purple-300" />
+            <span>Tutorial &amp; PSPM Question Bank</span>
+            <span className="bg-emerald-400 text-purple-950 px-2 py-0.5 rounded-full text-[10px] font-extrabold">
+              {questions.length} Qs
+            </span>
+          </button>
+        </div>
+
+        <div className="text-xs text-purple-800 font-bold px-2 flex items-center gap-2">
+          {activeSubTab === 'solver' ? (
+            <button
+              onClick={() => setActiveSubTab('bank')}
+              className="text-purple-700 hover:text-purple-950 underline flex items-center gap-1 cursor-pointer"
+            >
+              <span>Browse All {questions.length} Qs &amp; Mark Schemes</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <span className="text-purple-700 font-semibold">
+              Select any question below to solve in the interactive engine
+            </span>
+          )}
+        </div>
+      </div>
+
+      {activeSubTab === 'bank' ? (
+        <PastYearView
+          onLoadQuestionIntoSolver={(qId) => {
+            handleSelectQuestion(qId);
+            setActiveSubTab('solver');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          completedQuestions={userProgress.completedQuestions}
+        />
+      ) : (
+        <>
+          {/* Top Banner & Question Selector */}
+          <div className="bg-white p-5 rounded-2xl border-2 border-purple-200 shadow-xs space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-purple-100 pb-3">
           <div>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 text-xs font-bold mb-1">
@@ -1289,6 +1358,8 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
           </div>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 };
