@@ -188,16 +188,6 @@ export const AiStudyPromptGeneratorView: React.FC = () => {
 
   // Prompt Generator Logic
   const handleGeneratePrompt = () => {
-    if (!question.trim()) {
-      setValidationError('Please paste your question first.');
-      const qElement = document.getElementById('prompt-question-input');
-      if (qElement) {
-        qElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        qElement.focus();
-      }
-      return;
-    }
-
     setValidationError(null);
 
     // Platform Target Name
@@ -210,12 +200,22 @@ export const AiStudyPromptGeneratorView: React.FC = () => {
 
     lines.push(`You are my Biology study assistant using ${targetPlatformText}. I am a student in the Malaysian Matriculation College Biology Programme (SB015), studying Chapter 5: Population Genetics.`);
     lines.push('');
-    lines.push('Help me analyse and work through the following Biology question:');
-    lines.push('');
-    lines.push('----------------------------------------');
-    lines.push('### QUESTION:');
-    lines.push(question.trim());
-    lines.push('----------------------------------------');
+
+    if (question.trim()) {
+      lines.push('Help me analyse and work through the following Biology question:');
+      lines.push('');
+      lines.push('----------------------------------------');
+      lines.push('### QUESTION:');
+      lines.push(question.trim());
+      lines.push('----------------------------------------');
+    } else {
+      lines.push('Help me study and master SB015 Chapter 5: Population Genetics concepts, problem-solving calculations, and exam questions.');
+      lines.push('');
+      lines.push('----------------------------------------');
+      lines.push('### STUDY TOPIC / QUESTION:');
+      lines.push('[I will provide my question or specific study topic in our conversation. Please prepare to assist me according to the guidelines below.]');
+      lines.push('----------------------------------------');
+    }
 
     if (studentWorking.trim()) {
       lines.push('');
@@ -494,7 +494,7 @@ export const AiStudyPromptGeneratorView: React.FC = () => {
       {/* ========================================================= */}
       <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-purple-200 space-y-7">
         
-        {/* A. Question Input */}
+        {/* A. Question Input (Optional) */}
         <div className="space-y-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <label 
@@ -504,7 +504,7 @@ export const AiStudyPromptGeneratorView: React.FC = () => {
               <span className="w-5 h-5 rounded-full bg-purple-900 text-white text-xs flex items-center justify-center font-bold">
                 A
               </span>
-              <span>Paste or Scan Your Biology Question Here <span className="text-rose-600">*</span></span>
+              <span>Paste, Type or Scan Your Biology Question <span className="text-xs font-normal text-purple-600">(Optional)</span></span>
             </label>
 
             {/* Camera Scan Button */}
@@ -513,10 +513,10 @@ export const AiStudyPromptGeneratorView: React.FC = () => {
               id="scan-question-camera-btn"
               onClick={() => setIsCameraScanOpen(true)}
               className="group flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-800 to-indigo-900 hover:from-purple-700 hover:to-indigo-800 text-white font-extrabold text-xs shadow-xs hover:shadow-md border border-purple-400/50 transition-all cursor-pointer transform hover:-translate-y-0.5 active:scale-95"
-              title="Use your phone camera or webcam to scan and extract question text"
+              title="Use your phone camera or webcam to scan and extract question text (optional)"
             >
               <Camera className="w-3.5 h-3.5 text-amber-300 group-hover:scale-110 transition-transform" />
-              <span>📷 Scan Question with Camera</span>
+              <span>📷 Scan Question with Camera (Optional)</span>
             </button>
           </div>
 
@@ -529,10 +529,8 @@ export const AiStudyPromptGeneratorView: React.FC = () => {
                 setQuestion(e.target.value);
                 if (validationError) setValidationError(null);
               }}
-              placeholder="Type, paste, or scan your question here... (e.g., In a population of 200 individuals, 72 are homozygous recessive...)"
-              className={`w-full p-4 rounded-xl border text-sm font-normal text-purple-950 placeholder-purple-400 bg-[#FAF9F6] focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-600 transition-all ${
-                validationError ? 'border-rose-500 ring-2 ring-rose-200' : 'border-purple-200'
-              }`}
+              placeholder="Type, paste, or scan your question here (optional — you can also generate a general study prompt without entering a question)..."
+              className="w-full p-4 rounded-xl border border-purple-200 text-sm font-normal text-purple-950 placeholder-purple-400 bg-[#FAF9F6] focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-600 transition-all"
             />
           </div>
 
@@ -564,13 +562,6 @@ export const AiStudyPromptGeneratorView: React.FC = () => {
               <span>SB015 Chapter 5 or any Biology topic</span>
             </div>
           </div>
-
-          {validationError && (
-            <div className="flex items-center gap-1.5 text-xs font-bold text-rose-700 bg-rose-50 p-2.5 rounded-lg border border-rose-200">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>{validationError}</span>
-            </div>
-          )}
         </div>
 
         {/* B. What do you want the AI to do? */}
