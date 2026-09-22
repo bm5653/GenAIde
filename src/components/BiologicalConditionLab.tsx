@@ -1504,13 +1504,13 @@ export const BiologicalConditionLab: React.FC = () => {
 
           <div className="space-y-2 text-xs sm:text-sm text-purple-100 leading-relaxed max-w-4xl">
             <p>
-              • <strong>Hardy-Weinberg equilibrium is maintained</strong> when the assumptions of the model are satisfied (large population, random mating, no mutation, no gene flow, no natural selection). Under these conditions, allele frequencies $p$ and $q$ remain unchanged generation after generation.
+              • <strong>Hardy-Weinberg equilibrium is maintained</strong> when the assumptions of the model are satisfied (large population, random mating, no mutation, no gene flow, no natural selection). Under these conditions, allele frequencies <em className="font-serif font-bold text-amber-200 not-italic">p</em> and <em className="font-serif font-bold text-amber-200 not-italic">q</em> remain unchanged generation after generation.
             </p>
             <p>
               • <strong>When evolutionary forces</strong> such as natural selection, mutation, gene flow, or genetic drift act on a population, allele frequencies change over time—and this change in allele frequency constitutes biological evolution.
             </p>
             <p>
-              • <strong>Non-random mating</strong> can change genotype frequencies (e.g. inflating homozygotes in inbreeding) without necessarily altering allele frequencies $p$ and $q$.
+              • <strong>Non-random mating</strong> can change genotype frequencies (e.g. inflating homozygotes in inbreeding) without necessarily altering allele frequencies <em className="font-serif font-bold text-amber-200 not-italic">p</em> and <em className="font-serif font-bold text-amber-200 not-italic">q</em>.
             </p>
           </div>
 
