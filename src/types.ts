@@ -3,7 +3,6 @@ export type TabType =
   | 'learn'
   | 'toolbox'
   | 'practice'
-  | 'past-year'
   | 'pitfalls'
   | 'exit-ticket'
   | 'genaide-tutor'
@@ -19,18 +18,31 @@ export interface ChatMessage {
   isError?: boolean;
 }
 
+export type SolvingStepType = 
+  | 'given' 
+  | 'asked' 
+  | 'concept' 
+  | 'formula' 
+  | 'substitute' 
+  | 'calculate' 
+  | 'interpret' 
+  | 'general';
+
 export interface StepItem {
   stepNumber: number;
   title: string;
   instruction: string;
   expectedConcept: string;
+  stepType?: SolvingStepType;
+  stageName?: string;
   expectedSymbol?: string;
   symbolDescription?: string;
   acceptedAnswers: string[];
   tolerance?: number;
-  hint1: string;
-  hint2: string;
-  hint3: string;
+  hint1: string; // Conceptual clue
+  hint2: string; // Formula clue
+  hint3: string; // Substitution guidance
+  hint4?: string; // Calculation guidance
   explanation: string;
   marks?: number;
   inputPrefix?: string;
@@ -46,6 +58,12 @@ export interface QuestionData {
   number?: string;
   title: string;
   source: string;
+  sourceType?: 'Tutorial' | 'PSPM' | 'Practice';
+  year?: string;
+  topic?: string;
+  subtopic?: string;
+  pathwayType?: 'conceptual' | 'simple-calculation' | 'multi-step-calculation' | 'data-interpretation';
+  questionType?: 'Conceptual' | 'Calculation' | 'Data interpretation' | 'Application';
   category: 
     | 'hardy-weinberg'
     | 'gene-pool'
@@ -54,21 +72,24 @@ export interface QuestionData {
     | 'heterozygotes'
     | 'population-change'
     | 'next-generation'
+    | 'natural-selection'
     | 'structured'
     | 'essay';
-  difficulty: 'Foundation' | 'Intermediate' | 'Advanced' | 'Exam Standard';
+  difficulty: 'Foundation' | 'Basic' | 'Intermediate' | 'Advanced' | 'Exam Standard';
   questionText: string;
   contextData?: { [key: string]: string | number };
   targetConcept: string;
   isHardyWeinberg: boolean;
   whyHwOrNonHw: string;
-  detectorOptions: { label: string; isCorrect: boolean; feedback: string }[];
-  totalMarks: number;
+  detectorOptions?: { label: string; isCorrect: boolean; feedback: string }[];
+  totalMarks?: number;
   imageUrl?: string;
   imageCaption?: string;
   steps: StepItem[];
   finalAnswerText: string;
   officialAnswerScheme: string[];
+  keywords?: string[];
+  commonMistakeNote?: string;
 }
 
 export interface NoteItem {
@@ -134,7 +155,7 @@ export interface PitfallPracticeQuestion {
   modelWorking: {
     stepTitle: string;
     working: string;
-    marks: number;
+    marks?: number;
   }[];
-  examinerTips: string[];
+  examinerTips?: string[];
 }

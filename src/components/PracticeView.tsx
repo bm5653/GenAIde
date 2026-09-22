@@ -2,12 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ALL_QUESTIONS } from '../data/questionsData';
 import { ADDITIONAL_QUESTIONS } from '../data/pastYearAdditionalQuestions';
 import { QuestionData, StepItem, UserProgress } from '../types';
-import { MathToolbox } from './MathToolbox';
-import { PastYearView } from './PastYearView';
 import { getSavedQuestionState, saveQuestionState, clearQuestionState } from '../utils/questionProgress';
+import { getStandardFullDescription } from '../utils/symbolFormatter';
 import confetti from 'canvas-confetti';
 import { 
-  PenTool, 
   GraduationCap,
   CheckCircle2, 
   Check,
@@ -15,6 +13,7 @@ import {
   HelpCircle, 
   Award, 
   ChevronRight, 
+  ChevronLeft,
   RotateCcw, 
   AlertTriangle, 
   Lightbulb, 
@@ -23,45 +22,60 @@ import {
   Filter, 
   Layers, 
   ArrowRight,
+  ArrowLeft,
   Sparkles,
-  Lock
+  Lock,
+  Unlock,
+  Search,
+  BookOpen,
+  Calculator,
+  Compass,
+  FileText,
+  SlidersHorizontal,
+  Flame,
+  Info,
+  ExternalLink,
+  Target,
+  BarChart2,
+  RefreshCw,
+  Edit3
 } from 'lucide-react';
 
 interface PracticeViewProps {
   initialQuestionId?: string;
-  initialMode?: 'solver' | 'bank';
+  initialMode?: string;
   userProgress: UserProgress;
   onUpdateProgress: (questionId: string, score: number, isComplete: boolean) => void;
 }
 
 export const PracticeView: React.FC<PracticeViewProps> = ({
   initialQuestionId,
-  initialMode,
   userProgress,
   onUpdateProgress
 }) => {
-  // Combine core 8 questions + 3 additional deep past year questions
-  const questions: QuestionData[] = [...ALL_QUESTIONS, ...ADDITIONAL_QUESTIONS];
+  // Consolidate all questions
+  const allQuestions: QuestionData[] = [...ALL_QUESTIONS, ...ADDITIONAL_QUESTIONS];
 
-  const [activeSubTab, setActiveSubTab] = useState<'solver' | 'bank'>(
-    initialMode || 'solver'
+  // View state: 'directory' (Question Bank cards list) or 'solver' (Active question workspace)
+  const [activeViewMode, setActiveViewMode] = useState<'directory' | 'solver'>(
+    initialQuestionId ? 'solver' : 'directory'
   );
 
   const [selectedQuestionId, setSelectedQuestionId] = useState<string>(
-    initialQuestionId || questions[0].id
+    initialQuestionId || allQuestions[0].id
   );
 
   // Filters
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'Tutorial' | 'PSPM'>('all');
+  const [topicFilter, setTopicFilter] = useState<string>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Question state
-  const currentQuestion = questions.find(q => q.id === selectedQuestionId) || questions[0];
-  const [detectorAnswered, setDetectorAnswered] = useState(false);
-  const [detectorSelectedIdx, setDetectorSelectedIdx] = useState<number | null>(null);
+  // Active question object
+  const currentQuestion = allQuestions.find(q => q.id === selectedQuestionId) || allQuestions[0];
 
   // Step solver state
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const [userInputs, setUserInputs] = useState<Record<number, string>>({});
   const [stepFeedback, setStepFeedback] = useState<Record<number, {
     isCorrect: boolean;
@@ -69,34 +83,26 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
     showExplanation: boolean;
     attempts: number;
     activeHintLevel: number;
-    isBareAnswerWarning?: boolean;
-    tickAwarded?: boolean;
-    showIncorrectBanner?: boolean;
+    isAttemptSubmitted?: boolean;
+    errorType?: 'bare_answer' | 'bare_symbol' | 'concept' | 'calculation' | 'interpretation' | 'none';
   }>>({});
-  const [isQuestionFinished, setIsQuestionFinished] = useState(false);
-  const [showFullMarkScheme, setShowFullMarkScheme] = useState(false);
+  
+  const [isQuestionFinished, setIsQuestionFinished] = useState<boolean>(false);
 
-  // Math Toolbox target input reference
+  // Reflection state
+  const [reflectionSelections, setReflectionSelections] = useState<Record<string, boolean>>({});
+
+  // Input ref for Math toolbox
   const activeInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Filtered question list
-  const filteredQuestions = questions.filter(q => {
-    if (categoryFilter !== 'all' && q.category !== categoryFilter) return false;
-    if (difficultyFilter !== 'all' && q.difficulty !== difficultyFilter) return false;
-    return true;
-  });
-
-  // Auto-restore saved progress whenever selected question changes or progress event updates
+  // Restore state when question changes
   useEffect(() => {
     const loadState = (qId: string) => {
       const saved = getSavedQuestionState(qId);
       setUserInputs(saved.userInputs || {});
       setStepFeedback((saved.stepFeedback as any) || {});
       setCurrentStepIndex(saved.currentStepIndex || 0);
-      setIsQuestionFinished(!!saved.isQuestionFinished);
-      setDetectorAnswered(!!saved.detectorAnswered);
-      setDetectorSelectedIdx(saved.detectorSelectedIdx ?? null);
-      setShowFullMarkScheme(!!saved.isQuestionFinished);
+      setIsQuestionFinished(!!saved.isQuestionFinished || !!saved.attemptCompleted);
     };
 
     loadState(selectedQuestionId);
@@ -112,1402 +118,1213 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
     return () => window.removeEventListener('genaide_question_progress_updated', handleProgressUpdate);
   }, [selectedQuestionId]);
 
-  const handleSelectQuestion = (qId: string) => {
+  // Filter questions
+  const filteredQuestions = allQuestions.filter(q => {
+    // Source filter
+    const qSource = q.sourceType || (q.source.toLowerCase().includes('tutorial') ? 'Tutorial' : 'PSPM');
+    if (sourceFilter !== 'all' && qSource !== sourceFilter) return false;
+
+    // Topic filter
+    if (topicFilter !== 'all') {
+      const qTopic = q.topic || q.category;
+      if (qTopic !== topicFilter && q.category !== topicFilter) return false;
+    }
+
+    // Difficulty filter
+    if (difficultyFilter !== 'all' && q.difficulty !== difficultyFilter) return false;
+
+    // Search query
+    if (searchQuery.trim()) {
+      const qLower = searchQuery.toLowerCase();
+      const matchTitle = q.title.toLowerCase().includes(qLower);
+      const matchSource = q.source.toLowerCase().includes(qLower);
+      const matchText = q.questionText.toLowerCase().includes(qLower);
+      const matchConcept = q.targetConcept.toLowerCase().includes(qLower);
+      if (!matchTitle && !matchSource && !matchText && !matchConcept) return false;
+    }
+
+    return true;
+  });
+
+  const tutorialCount = allQuestions.filter(q => (q.sourceType || (q.source.includes('Tutorial') ? 'Tutorial' : 'PSPM')) === 'Tutorial').length;
+  const pspmCount = allQuestions.filter(q => (q.sourceType || (q.source.includes('PSPM') ? 'PSPM' : 'PSPM')) === 'PSPM').length;
+
+  // Question navigation actions
+  const handleOpenQuestion = (qId: string) => {
     setSelectedQuestionId(qId);
+    setActiveViewMode('solver');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Helper to retrieve official description and symbol pairing
-  const getStepSymbolDescription = (step: StepItem): { symbol: string; description: string; prefixWithSymbol: string } => {
-    if (step.symbolDescription) {
-      const sym = step.expectedSymbol || '';
-      return {
-        symbol: sym,
-        description: step.symbolDescription,
-        prefixWithSymbol: sym ? `${step.symbolDescription}, ${sym}` : step.symbolDescription
-      };
+  const handleBackToDirectory = () => {
+    setActiveViewMode('directory');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const currentIndexInFiltered = filteredQuestions.findIndex(q => q.id === selectedQuestionId);
+
+  const handleNextQuestion = () => {
+    if (currentIndexInFiltered < filteredQuestions.length - 1) {
+      handleOpenQuestion(filteredQuestions[currentIndexInFiltered + 1].id);
     }
+  };
 
-    const sym = step.expectedSymbol;
-    const combined = (step.title + ' ' + step.instruction + ' ' + step.expectedConcept).toLowerCase();
-
-    if (sym === 'q²') {
-      let desc = 'Frequency of homozygous recessive genotype';
-      if (combined.includes('white coat') || combined.includes('white')) desc = 'Frequency of homozygous recessive genotype (white coated)';
-      else if (combined.includes('eyelash')) desc = 'Frequency of homozygous recessive genotype (extra-long eyelashes)';
-      else if (combined.includes('pku') || combined.includes('abnormal')) desc = 'Frequency of homozygous recessive genotype (PKU)';
-      else if (combined.includes('fair')) desc = 'Frequency of homozygous recessive genotype (fair variety)';
-      else if (combined.includes('grey') || combined.includes('gray')) desc = 'Frequency of homozygous recessive genotype (grey hair)';
-      else if (combined.includes('thalassemia')) desc = 'Frequency of homozygous recessive genotype (thalassemia major)';
-      else if (combined.includes('short legs') || combined.includes('chicken')) desc = 'Frequency of homozygous recessive genotype (short legs)';
-      else if (combined.includes('tay-sachs')) desc = 'Frequency of homozygous recessive genotype (Tay-Sachs)';
-      else if (combined.includes('albino') || combined.includes('albinism')) desc = 'Frequency of homozygous recessive genotype (albino)';
-      else if (combined.includes('non-dimple')) desc = 'Frequency of homozygous recessive genotype (non-dimpled)';
-      else if (combined.includes('vestigial')) desc = 'Frequency of homozygous recessive genotype (vestigial wings)';
-      else if (combined.includes('yellow')) desc = 'Frequency of homozygous recessive genotype (yellow fur)';
-
-      return {
-        symbol: 'q²',
-        description: desc,
-        prefixWithSymbol: `${desc}, q²`
-      };
+  const handlePrevQuestion = () => {
+    if (currentIndexInFiltered > 0) {
+      handleOpenQuestion(filteredQuestions[currentIndexInFiltered - 1].id);
     }
+  };
 
-    if (sym === 'q') {
-      let desc = 'Frequency of recessive allele';
-      if (combined.includes('fair')) desc = 'Frequency of recessive allele (fair allele)';
-      else if (combined.includes('grey')) desc = 'Frequency of recessive allele (grey hair allele)';
-      else if (combined.includes('vestigial') || combined.includes('allele l')) desc = 'Frequency of recessive allele (l)';
-      else if (combined.includes('yellow') || combined.includes('allele b')) desc = 'Frequency of recessive allele (b)';
+  const handleNextSameSource = (source: 'Tutorial' | 'PSPM') => {
+    const list = allQuestions.filter(q => (q.sourceType || (q.source.includes('Tutorial') ? 'Tutorial' : 'PSPM')) === source);
+    const curIdx = list.findIndex(q => q.id === selectedQuestionId);
+    const nextQ = list[(curIdx + 1) % list.length];
+    if (nextQ) handleOpenQuestion(nextQ.id);
+  };
 
-      return {
-        symbol: 'q',
-        description: desc,
-        prefixWithSymbol: `${desc}, q`
-      };
+  const handleSimilarQuestion = () => {
+    const curTopic = currentQuestion.topic || currentQuestion.category;
+    const sameTopicList = allQuestions.filter(q => q.id !== currentQuestion.id && (q.topic === curTopic || q.category === curTopic));
+    if (sameTopicList.length > 0) {
+      handleOpenQuestion(sameTopicList[0].id);
+    } else {
+      handleNextQuestion();
     }
+  };
 
-    if (sym === 'p') {
-      let desc = 'Frequency of dominant allele';
-      if (combined.includes('dark')) desc = 'Frequency of dominant allele (dark allele)';
-      else if (combined.includes('black')) desc = 'Frequency of dominant allele (black allele)';
-      else if (combined.includes('dimple')) desc = 'Frequency of dominant allele (dimple allele)';
-      else if (combined.includes('normal wing') || combined.includes('allele l')) desc = 'Frequency of dominant allele (L)';
-      else if (combined.includes('allele b')) desc = 'Frequency of dominant allele (B)';
+  const [editingSteps, setEditingSteps] = useState<{ [key: number]: boolean }>({});
+  const inputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
 
-      return {
-        symbol: 'p',
-        description: desc,
-        prefixWithSymbol: `${desc}, p`
-      };
+  // Helper to retrieve stage title and symbol info
+  const getStepStageName = (step: StepItem, idx: number): string => {
+    if (step.stageName) return step.stageName;
+    if (step.title.toLowerCase().includes('given') || step.title.toLowerCase().includes('identify') || step.title.toLowerCase().includes('break down')) return 'Given Data';
+    if (step.title.toLowerCase().includes('recessive allele') || step.title.toLowerCase().includes('q for') || step.title.toLowerCase().includes('recessive')) return 'Recessive (q)';
+    if (step.title.toLowerCase().includes('dominant allele') || step.title.toLowerCase().includes('p for') || step.title.toLowerCase().includes('dominant')) return 'Dominant (p)';
+    if (step.title.toLowerCase().includes('heterozyg') || step.title.toLowerCase().includes('carrier') || step.title.toLowerCase().includes('2pq')) return 'Heterozygote (2pq)';
+    if (step.title.toLowerCase().includes('formula')) return 'Formula';
+    if (step.title.toLowerCase().includes('calculate') || step.title.toLowerCase().includes('percentage')) return 'Calculate';
+    if (step.title.toLowerCase().includes('interpret') || step.title.toLowerCase().includes('conclusion') || step.title.toLowerCase().includes('child') || idx === currentQuestion.steps.length - 1) return 'Final / Conclusion';
+    return `Step ${idx + 1}`;
+  };
+
+  // Helper to get full standard description with symbol for the step
+  const getStepStandardDescription = (step: StepItem) => {
+    return getStandardFullDescription(step, currentQuestion?.questionText);
+  };
+
+  // Math quick-insert handler for a specific step
+  const handleInsertSymbol = (symbol: string, stepIdx: number) => {
+    const currentVal = userInputs[stepIdx] || '';
+    const inputEl = inputRefs.current[stepIdx];
+    
+    if (inputEl) {
+      const start = inputEl.selectionStart || currentVal.length;
+      const end = inputEl.selectionEnd || currentVal.length;
+      const newVal = currentVal.substring(0, start) + symbol + currentVal.substring(end);
+      setUserInputs(prev => ({ ...prev, [stepIdx]: newVal }));
+      setTimeout(() => {
+        inputEl.focus();
+        inputEl.setSelectionRange(start + symbol.length, start + symbol.length);
+      }, 10);
+    } else {
+      setUserInputs(prev => ({ ...prev, [stepIdx]: currentVal + symbol }));
     }
+  };
 
-    if (sym === '2pq') {
-      return {
-        symbol: '2pq',
-        description: 'Frequency of heterozygous genotype',
-        prefixWithSymbol: 'Frequency of heterozygous genotype, 2pq'
-      };
-    }
-
-    if (sym === 'p²') {
-      return {
-        symbol: 'p²',
-        description: 'Frequency of homozygous dominant genotype',
-        prefixWithSymbol: 'Frequency of homozygous dominant genotype, p²'
-      };
-    }
-
-    if (combined.includes('p² + 2pq') || combined.includes('black coated') || combined.includes('dominant phenotype')) {
-      return {
-        symbol: 'p² + 2pq',
-        description: 'Genotype frequency of dominant phenotype',
-        prefixWithSymbol: 'Genotype frequency of dominant phenotype, p² + 2pq'
-      };
-    }
-
-    if (combined.includes('percentage') && (combined.includes('carrier') || combined.includes('heterozyg'))) {
-      return {
-        symbol: '2pq × 100%',
-        description: 'Percentage of heterozygous individuals',
-        prefixWithSymbol: 'Percentage of heterozygous individuals, 2pq × 100%'
-      };
-    }
-
-    if (combined.includes('percentage') && combined.includes('homozygous dominant')) {
-      return {
-        symbol: 'p² × 100%',
-        description: 'Percentage of homozygous dominant individuals',
-        prefixWithSymbol: 'Percentage of homozygous dominant individuals, p² × 100%'
-      };
-    }
-
-    if (combined.includes('number of') || combined.includes('how many')) {
-      if (combined.includes('heterozyg') || combined.includes('carrier') || combined.includes('minor')) {
-        return {
-          symbol: '2pq × N',
-          description: 'Number of heterozygous individuals',
-          prefixWithSymbol: 'Number of heterozygous individuals'
-        };
+  // Auto-insert full description template for a specific step
+  const handleInsertFullDescription = (prefix: string, stepIdx: number) => {
+    const currentVal = userInputs[stepIdx] || '';
+    if (currentVal.startsWith(prefix)) return;
+    
+    const cleanVal = currentVal.replace(/^[^0-9.]*/, '').trim();
+    const newVal = `${prefix}${cleanVal}`;
+    setUserInputs(prev => ({ ...prev, [stepIdx]: newVal }));
+    
+    setTimeout(() => {
+      const inputEl = inputRefs.current[stepIdx];
+      if (inputEl) {
+        inputEl.focus();
+        inputEl.setSelectionRange(newVal.length, newVal.length);
       }
-      if (combined.includes('homozygous dominant') || combined.includes('bb')) {
-        return {
-          symbol: 'p² × N',
-          description: 'Number of homozygous dominant individuals',
-          prefixWithSymbol: 'Number of homozygous dominant individuals'
-        };
-      }
-      if (combined.includes('fair') || combined.includes('recessive') || combined.includes('non-dimple')) {
-        return {
-          symbol: 'N_recessive',
-          description: 'Number of recessive individuals',
-          prefixWithSymbol: 'Number of recessive individuals'
-        };
-      }
-      return {
-        symbol: 'Number',
-        description: 'Number of individuals',
-        prefixWithSymbol: 'Number of individuals'
-      };
+    }, 10);
+  };
+
+  const scrollToStep = (idx: number) => {
+    setCurrentStepIndex(idx);
+    const el = document.getElementById(`step-card-${idx}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
+  // Check Step Submission with STRICT Matriculation Symbol Description & Decimal Places Matching
+  const getStepSchemeRequirements = (step: StepItem, questionText: string) => {
+    const primary = step.acceptedAnswers[0] || '';
+    const isPercentage = primary.includes('%') || step.instruction.toLowerCase().includes('percentage') || step.title.toLowerCase().includes('percentage');
+    
+    // Check decimal count from primary accepted answer or question instructions
+    let expectedDecimals: number | null = null;
+    const floatMatch = primary.match(/[0-9]+\.([0-9]+)/);
+    if (floatMatch) {
+      expectedDecimals = floatMatch[1].length;
     }
 
-    if (combined.includes('total') && combined.includes('allele')) {
-      return {
-        symbol: 'Total alleles',
-        description: 'Total number of alleles in gene pool',
-        prefixWithSymbol: 'Total number of alleles in gene pool'
-      };
+    // Check if question text or step explicitly specifies decimal precision
+    const lowerQ = (questionText + ' ' + step.instruction).toLowerCase();
+    if (lowerQ.includes('5 decimal') || lowerQ.includes('five decimal')) {
+      expectedDecimals = 5;
+    } else if (lowerQ.includes('4 decimal') || lowerQ.includes('four decimal')) {
+      expectedDecimals = 4;
+    } else if (lowerQ.includes('3 decimal') || lowerQ.includes('three decimal')) {
+      if (expectedDecimals === null || expectedDecimals < 3) expectedDecimals = 3;
+    } else if (lowerQ.includes('2 decimal') || lowerQ.includes('two decimal')) {
+      if (expectedDecimals === null) expectedDecimals = 2;
     }
 
-    if (combined.includes('new dominant allele')) {
-      return {
-        symbol: 'p_new',
-        description: 'New dominant allele frequency',
-        prefixWithSymbol: 'New dominant allele frequency'
-      };
-    }
-
-    if (combined.includes('new recessive allele')) {
-      return {
-        symbol: 'q_new',
-        description: 'New recessive allele frequency',
-        prefixWithSymbol: 'New recessive allele frequency'
-      };
-    }
+    const numericVal = parseFloat(primary.replace(/[^0-9.-]/g, ''));
+    const isInteger = !isNaN(numericVal) && Number.isInteger(numericVal) && !primary.includes('.');
 
     return {
-      symbol: sym || '',
-      description: step.title,
-      prefixWithSymbol: sym ? `${step.title}, ${sym}` : step.title
+      expectedDecimals,
+      primaryAnswer: primary,
+      isPercentage,
+      isInteger,
+      numericVal
     };
   };
 
-  // Helper to generate step scaffold template with DESCRIPTION FIRST
-  const getStepScaffold = (step: StepItem): string => {
-    const meta = getStepSymbolDescription(step);
-    const sym = step.expectedSymbol;
+  const handleCheckStep = (stepIdx: number, overrideInput?: string) => {
+    const step = currentQuestion.steps[stepIdx];
+    const rawInput = (overrideInput !== undefined ? overrideInput : (userInputs[stepIdx] || '')).trim();
 
-    if (sym === 'q²') {
-      return `${meta.prefixWithSymbol} = [recessive count] / [total population] = `;
-    }
-    if (sym === 'q') {
-      return `${meta.prefixWithSymbol} = √q² = √(...) = `;
-    }
-    if (sym === 'p') {
-      return `${meta.prefixWithSymbol} = 1 - q = 1 - (...) = `;
-    }
-    if (sym === '2pq') {
-      return `${meta.prefixWithSymbol} = 2 × p × q = 2(...) (...) = `;
-    }
-    if (sym === 'p²') {
-      return `${meta.prefixWithSymbol} = p × p = (...)² = `;
-    }
-    const combined = (step.title + ' ' + step.instruction).toLowerCase();
-    if (combined.includes('p² + 2pq') || combined.includes('black coated')) {
-      return `${meta.prefixWithSymbol} = 1 - q² = 1 - (...) = `;
-    }
-    if (combined.includes('percentage') && (combined.includes('carrier') || combined.includes('heterozyg'))) {
-      return `${meta.prefixWithSymbol} = 2(...) (...) × 100% = `;
-    }
-    if (combined.includes('percentage') && combined.includes('homozygous dominant')) {
-      return `${meta.prefixWithSymbol} = (...)² × 100% = `;
-    }
-    if (combined.includes('number of') || combined.includes('how many')) {
-      if (combined.includes('heterozyg') || combined.includes('carrier') || combined.includes('minor')) {
-        return `${meta.description} = 2pq × N = (...) × (...) = `;
-      }
-      if (combined.includes('homozygous dominant')) {
-        return `${meta.description} = p² × N = (...) × (...) = `;
-      }
-      return `${meta.description} = [frequency] × [total N] = ... × ... = `;
-    }
-    if (combined.includes('allele') && (combined.includes('count') || combined.includes('total') || combined.includes('pool'))) {
-      return `${meta.description} = 2(...) + (...) = `;
-    }
-    if (combined.includes('new dominant allele')) {
-      return `${meta.description} = (Dominant alleles) / (Total alleles) = `;
-    }
-    if (combined.includes('new recessive allele')) {
-      return `${meta.description} = (Recessive alleles) / (Total alleles) = `;
-    }
-    if (sym) {
-      return `${meta.prefixWithSymbol} = ... = `;
-    }
-    return `${meta.description} = ... = `;
-  };
+    if (!rawInput && !step.isMultipleChoice) return;
 
-  // Helper to get formatted example of accepted step calculation with DESCRIPTION FIRST
-  // Provides generic structural guidance ONLY, without revealing the answer scheme or numerical values
-  const getExampleStepText = (step: StepItem): string => {
-    const meta = getStepSymbolDescription(step);
-    const sym = step.expectedSymbol;
+    const prevAttempts = stepFeedback[stepIdx]?.attempts || 0;
+    const newAttempts = prevAttempts + 1;
 
-    if (sym === 'q²') {
-      return `${meta.prefixWithSymbol} = [recessive count] / [total population] = [value]`;
-    }
-    if (sym === 'q') {
-      return `${meta.prefixWithSymbol} = √q² = √(...) = [value]`;
-    }
-    if (sym === 'p') {
-      return `${meta.prefixWithSymbol} = 1 - q = 1 - (...) = [value]`;
-    }
-    if (sym === '2pq') {
-      return `${meta.prefixWithSymbol} = 2 × p × q = 2(...) (...) = [value]`;
-    }
-    if (sym === 'p²') {
-      return `${meta.prefixWithSymbol} = p² = (...)² = [value]`;
-    }
-    const combined = (step.title + ' ' + step.instruction).toLowerCase();
-    if (combined.includes('p² + 2pq') || combined.includes('dominant phenotype')) {
-      return `${meta.prefixWithSymbol} = 1 - q² = 1 - (...) = [value]`;
-    }
-    if (combined.includes('percentage') && (combined.includes('carrier') || combined.includes('heterozyg'))) {
-      return `${meta.prefixWithSymbol} = 2pq × 100% = 2(...) (...) × 100% = [value]%`;
-    }
-    if (combined.includes('percentage') && combined.includes('homozygous dominant')) {
-      return `${meta.prefixWithSymbol} = p² × 100% = (...)² × 100% = [value]%`;
-    }
-    if (combined.includes('number of') || combined.includes('how many')) {
-      return `${meta.description} = [frequency] × [total N] = (...) × (...) = [number]`;
-    }
-    if (combined.includes('allele') && (combined.includes('count') || combined.includes('total') || combined.includes('pool'))) {
-      return `${meta.description} = 2(...) + (...) = [total alleles]`;
-    }
-    if (sym) {
-      return `${meta.prefixWithSymbol} = [formula] = [substitution] = [value]`;
-    }
-    return `${meta.description} = [working] = [value]`;
-  };
+    let isCorrect = false;
+    let feedbackText = '';
+    let errorType: 'bare_answer' | 'bare_symbol' | 'concept' | 'calculation' | 'interpretation' | 'none' = 'none';
 
-  // Format verified step display with official Matriculation description preceding the symbol
-  const formatStepWithDescription = (step: StepItem, rawInput: string): string => {
-    const meta = getStepSymbolDescription(step);
-    const trimmed = (rawInput || '').trim();
-    if (!trimmed) {
-      return `${meta.prefixWithSymbol} = ${step.acceptedAnswers[0]}`;
-    }
-
-    // Check if rawInput already includes a meaningful word of description
-    const descWords = meta.description.toLowerCase().split(/[\s,()]+/).filter(w => w.length >= 4);
-    const hasDescription = descWords.some(w => trimmed.toLowerCase().includes(w));
-
-    if (hasDescription) {
-      return trimmed;
-    }
-
-    // If student wrote "q² = ..." or "q = ..." without description
-    if (step.expectedSymbol && trimmed.startsWith(step.expectedSymbol)) {
-      return `${meta.description}, ${trimmed}`;
-    }
-
-    // If includes '='
-    if (trimmed.includes('=')) {
-      return `${meta.prefixWithSymbol} = ${trimmed}`;
-    }
-
-    return `${meta.prefixWithSymbol} = ${trimmed}`;
-  };
-
-  // Check if student entered ONLY a bare answer without showing calculation steps
-  const isBareAnswerOnly = (rawVal: string, isNumericStep: boolean): boolean => {
-    if (!isNumericStep) return false;
-    const trimmed = rawVal.trim();
-    
-    // Pure number or percentage alone (e.g. "0.0008", ".0008", "0.4", "288", "36%")
-    const pureNumRegex = /^[+-]?(?:\d*\.)?\d+%?$/;
-    if (pureNumRegex.test(trimmed)) return true;
-
-    // Number with noun alone (e.g. "288 hamsters", "0.4 frequency") with NO math operators or formulas
-    const numWithWordRegex = /^[+-]?(?:\d*\.)?\d+\s*(?:individuals|hamsters|mice|students|geese|chickens|people|cows|goats|flies|varieties|babies|carriers|%)?$/i;
-    if (numWithWordRegex.test(trimmed)) {
-      const hasMathSymbols = /[=/*×÷+\-√²^()]/.test(trimmed) || /\b(q|p|2pq|q2|p2|sqrt|root|total)\b/i.test(trimmed);
-      if (!hasMathSymbols) return true;
-    }
-
-    return false;
-  };
-
-  const handleInsertSymbolToStep = (stepNumber: number, sym: string) => {
-    setUserInputs(prev => {
-      const cur = prev[stepNumber] || '';
-      const nextVal = cur + (cur.endsWith(' ') || cur === '' ? '' : ' ') + sym;
-      const nextInputs = { ...prev, [stepNumber]: nextVal };
-      saveQuestionState(selectedQuestionId, {
-        userInputs: nextInputs,
-        stepFeedback,
-        currentStepIndex,
-        isQuestionFinished,
-        detectorAnswered,
-        detectorSelectedIdx
-      });
-      return nextInputs;
-    });
-    if (activeInputRef.current) {
-      activeInputRef.current.focus();
-    }
-  };
-
-  const handleInsertTextToStep = (stepNumber: number, text: string) => {
-    setUserInputs(prev => {
-      const cur = prev[stepNumber] || '';
-      const nextVal = cur + (cur.endsWith(' ') || cur === '' ? '' : ' ') + text;
-      const nextInputs = { ...prev, [stepNumber]: nextVal };
-      saveQuestionState(selectedQuestionId, {
-        userInputs: nextInputs,
-        stepFeedback,
-        currentStepIndex,
-        isQuestionFinished,
-        detectorAnswered,
-        detectorSelectedIdx
-      });
-      return nextInputs;
-    });
-    if (activeInputRef.current) {
-      activeInputRef.current.focus();
-    }
-  };
-
-  const handleInsertScaffoldToStep = (step: StepItem) => {
-    const scaffold = getStepScaffold(step);
-    setUserInputs(prev => {
-      const nextInputs = { ...prev, [step.stepNumber]: scaffold };
-      saveQuestionState(selectedQuestionId, {
-        userInputs: nextInputs,
-        stepFeedback,
-        currentStepIndex,
-        isQuestionFinished,
-        detectorAnswered,
-        detectorSelectedIdx
-      });
-      return nextInputs;
-    });
-    if (activeInputRef.current) {
-      activeInputRef.current.focus();
-    }
-  };
-
-  const handleInputChange = (stepNumber: number, val: string) => {
-    setUserInputs(prev => {
-      const nextInputs = { ...prev, [stepNumber]: val };
-      saveQuestionState(selectedQuestionId, {
-        userInputs: nextInputs,
-        stepFeedback,
-        currentStepIndex,
-        isQuestionFinished,
-        detectorAnswered,
-        detectorSelectedIdx
-      });
-      return nextInputs;
-    });
-
-    if (stepFeedback[stepNumber]?.showIncorrectBanner) {
-      setStepFeedback(prev => {
-        const nextFb = {
-          ...prev,
-          [stepNumber]: { ...prev[stepNumber], showIncorrectBanner: false }
-        };
-        saveQuestionState(selectedQuestionId, {
-          userInputs,
-          stepFeedback: nextFb,
-          currentStepIndex,
-          isQuestionFinished,
-          detectorAnswered,
-          detectorSelectedIdx
-        });
-        return nextFb;
-      });
-    }
-  };
-
-  // Check Step Answer with strict step calculation enforcement & PopGen error diagnosis
-  const checkStep = (step: StepItem, selectedChoiceValue?: string) => {
-    const rawVal = (selectedChoiceValue !== undefined ? selectedChoiceValue : userInputs[step.stepNumber] || '').trim();
-    if (!rawVal) return;
-
-    const currentAttempt = (stepFeedback[step.stepNumber]?.attempts || 0) + 1;
-    const isNumericStep = step.acceptedAnswers.some(ans => /\d/.test(ans));
-
-    // Multiple-choice step handling (e.g. Question 1 Step 5 Conclusion: Yes / No equilibrium)
+    // Multiple Choice evaluation
     if (step.isMultipleChoice && step.choiceOptions) {
-      const chosenOpt = step.choiceOptions.find(opt => 
-        opt.value.toLowerCase() === rawVal.toLowerCase() ||
-        opt.label.toLowerCase().includes(rawVal.toLowerCase())
-      );
-      const isChoiceCorrect = chosenOpt ? chosenOpt.isCorrect : step.acceptedAnswers.some(ans => ans.toLowerCase() === rawVal.toLowerCase());
-
-      if (isChoiceCorrect) {
-        const newFb = {
-          ...stepFeedback,
-          [step.stepNumber]: {
-            isCorrect: true,
-            isBareAnswerWarning: false,
-            tickAwarded: true,
-            feedbackText: chosenOpt?.feedback || `✓ Correct Conclusion! [${step.marks || 1} ${step.marks === 1 ? 'mark' : 'marks'}]`,
-            showExplanation: true,
-            attempts: currentAttempt,
-            activeHintLevel: stepFeedback[step.stepNumber]?.activeHintLevel || 0,
-            showIncorrectBanner: false
-          }
-        };
-        setStepFeedback(newFb);
-
-        // If last step completed
-        if (currentStepIndex === currentQuestion.steps.length - 1) {
-          setIsQuestionFinished(true);
-          saveQuestionState(selectedQuestionId, {
-            userInputs,
-            stepFeedback: newFb,
-            currentStepIndex,
-            isQuestionFinished: true,
-            detectorAnswered,
-            detectorSelectedIdx
-          });
-          try {
-            confetti({
-              particleCount: 80,
-              spread: 70,
-              origin: { y: 0.6 }
-            });
-          } catch {}
-          onUpdateProgress(currentQuestion.id, currentQuestion.totalMarks, true);
-        } else {
-          const nextIdx = currentStepIndex + 1;
-          setCurrentStepIndex(nextIdx);
-          saveQuestionState(selectedQuestionId, {
-            userInputs,
-            stepFeedback: newFb,
-            currentStepIndex: nextIdx,
-            isQuestionFinished: false,
-            detectorAnswered,
-            detectorSelectedIdx
-          });
-        }
+      const selectedOption = step.choiceOptions.find(o => o.value.toLowerCase() === rawInput.toLowerCase() || o.label.toLowerCase() === rawInput.toLowerCase());
+      const isAcceptedText = step.acceptedAnswers.some(ans => rawInput.toLowerCase().includes(ans.toLowerCase()) || ans.toLowerCase().includes(rawInput.toLowerCase()));
+      if (selectedOption?.isCorrect || isAcceptedText) {
+        isCorrect = true;
+        feedbackText = `✓ Correct. Well done! [${step.marks || 1} ${step.marks === 1 ? 'mark' : 'marks'}]`;
+        errorType = 'none';
       } else {
-        const newFb = {
-          ...stepFeedback,
-          [step.stepNumber]: {
-            isCorrect: false,
-            isBareAnswerWarning: false,
-            tickAwarded: false,
-            feedbackText: chosenOpt?.feedback || "✗ Incorrect conclusion! Please review allele frequency changes between 1995 and 2005.",
-            showExplanation: false,
-            attempts: currentAttempt,
-            activeHintLevel: stepFeedback[step.stepNumber]?.activeHintLevel || 0,
-            showIncorrectBanner: true
-          }
-        };
-        setStepFeedback(newFb);
-        saveQuestionState(selectedQuestionId, {
-          userInputs,
-          stepFeedback: newFb,
-          currentStepIndex,
-          isQuestionFinished,
-          detectorAnswered,
-          detectorSelectedIdx
-        });
-      }
-      return;
-    }
-
-    // MANDATORY REQUIREMENT: Students must give their answers in step-by-step calculation.
-    // They are NOT allowed to give only their answers. They must show the steps with the description of the symbol first.
-    if (isNumericStep && isBareAnswerOnly(rawVal, isNumericStep)) {
-      const example = getExampleStepText(step);
-      const newFb = {
-        ...stepFeedback,
-        [step.stepNumber]: {
-          isCorrect: false,
-          isBareAnswerWarning: true,
-          tickAwarded: false,
-          feedbackText: `⚠️ Working Step with Description Required: You are NOT allowed to give only the final bare answer ("${rawVal}"). In Matriculation Biology examination standard, all symbols must be written with their description first in the calculation (e.g. "${example}").`,
-          showExplanation: currentAttempt >= 3,
-          attempts: currentAttempt,
-          activeHintLevel: stepFeedback[step.stepNumber]?.activeHintLevel || 0,
-          showIncorrectBanner: false
-        }
-      };
-      setStepFeedback(newFb);
-      saveQuestionState(selectedQuestionId, {
-        userInputs,
-        stepFeedback: newFb,
-        currentStepIndex,
-        isQuestionFinished,
-        detectorAnswered,
-        detectorSelectedIdx
-      });
-      return;
-    }
-
-    // Extract student's candidate answer value from their step-by-step calculation
-    let candidate = rawVal.trim();
-    if (rawVal.includes('=')) {
-      const parts = rawVal.split('=');
-      candidate = parts[parts.length - 1].trim();
-    }
-    // Clean candidate from trailing punctuation like '.' or ';'
-    candidate = candidate.replace(/[.;]+$/, '').trim();
-    const cleanCandidate = candidate.toLowerCase();
-    const cleanRaw = rawVal.toLowerCase().trim();
-
-    // Strict equality check against the official mark scheme:
-    const exactMatch = step.acceptedAnswers.some(ans => {
-      const a = ans.trim().toLowerCase();
-      const c = cleanCandidate;
-      const r = cleanRaw;
-
-      if (c === a || r === a) return true;
-      if (c.replace(/[\s,]+/g, '') === a.replace(/[\s,]+/g, '')) return true;
-      if (a.endsWith('%') && (c === a || c + '%' === a || c === a.replace('%', ''))) return true;
-      if (!isNumericStep && (r.includes(a) || r.replace(/\s+/g, '').includes(a.replace(/\s+/g, '')))) return true;
-      return false;
-    });
-
-    if (exactMatch) {
-      // Correct step calculation verified against the official answer scheme!
-      const newFb = {
-        ...stepFeedback,
-        [step.stepNumber]: {
-          isCorrect: true,
-          isBareAnswerWarning: false,
-          tickAwarded: true,
-          feedbackText: `✓ Correct Step! Well done! [${step.marks || 1} ${step.marks === 1 ? 'mark' : 'marks'}]`,
-          showExplanation: true,
-          attempts: currentAttempt,
-          activeHintLevel: stepFeedback[step.stepNumber]?.activeHintLevel || 0,
-          showIncorrectBanner: false
-        }
-      };
-      setStepFeedback(newFb);
-
-      // If last step completed
-      if (currentStepIndex === currentQuestion.steps.length - 1) {
-        setIsQuestionFinished(true);
-        saveQuestionState(selectedQuestionId, {
-          userInputs,
-          stepFeedback: newFb,
-          currentStepIndex,
-          isQuestionFinished: true,
-          detectorAnswered,
-          detectorSelectedIdx
-        });
-        try {
-          confetti({
-            particleCount: 80,
-            spread: 70,
-            origin: { y: 0.6 }
-          });
-        } catch {}
-        onUpdateProgress(currentQuestion.id, currentQuestion.totalMarks, true);
-      } else {
-        // Unlock next step
-        const nextIdx = currentStepIndex + 1;
-        setCurrentStepIndex(nextIdx);
-        saveQuestionState(selectedQuestionId, {
-          userInputs,
-          stepFeedback: newFb,
-          currentStepIndex: nextIdx,
-          isQuestionFinished: false,
-          detectorAnswered,
-          detectorSelectedIdx
-        });
+        isCorrect = false;
+        feedbackText = `❌ Incorrect. Check your answers/steps.`;
+        errorType = 'concept';
       }
     } else {
-      // Answer does NOT match the answer scheme.
-      const newFb = {
-        ...stepFeedback,
-        [step.stepNumber]: {
-          isCorrect: false,
-          isBareAnswerWarning: false,
-          tickAwarded: false,
-          feedbackText: "✗ Incorrect! Please check your answers/steps.",
-          showExplanation: false,
-          attempts: currentAttempt,
-          activeHintLevel: stepFeedback[step.stepNumber]?.activeHintLevel || 0,
-          showIncorrectBanner: true
+      // Step-by-Step input evaluation
+      const standardDesc = getStepStandardDescription(step);
+
+      // Check if description is required for this step
+      const isDescriptiveStep = standardDesc.description.length > 0;
+
+      // 1. Check for Bare Answers (numbers only, e.g. "0.0008", ".0283", "4/5000")
+      const isBareNumber = /^[0-9./\s%=-]+$/.test(rawInput.trim()) || /^[a-z²³\s]*=[0-9./\s%]+$/i.test(rawInput.trim().replace(/\s+/g, ''));
+      const hasDescriptiveWords = /frequency|homozygous|heterozygous|recessive|dominant|allele|genotype|number|carrier|percentage|proportion|total|ratio|equilibrium|population/i.test(rawInput);
+
+      if (isDescriptiveStep && !hasDescriptiveWords && !rawInput.includes(standardDesc.description)) {
+        // Did they type only bare symbol and number? (e.g., "q² = 0.0008" or "q = 0.0283")
+        const hasSymbolOnly = /^(q²|p²|2pq|q|p|n)\s*=/i.test(rawInput.trim()) || /^(q\^2|p\^2)\s*=/i.test(rawInput.trim());
+
+        errorType = hasSymbolOnly ? 'bare_symbol' : 'bare_answer';
+        isCorrect = false;
+        feedbackText = `❌ Incorrect. Check your answers/steps.`;
+      } else {
+        // Description keywords are present (or not a descriptive step). Now verify numerical / algebraic correctness.
+        const normalizedInput = rawInput.toLowerCase().replace(/\s+/g, '').replace(/,/g, '');
+        
+        const exactMatch = step.acceptedAnswers.some(ans => {
+          const normAns = ans.toLowerCase().replace(/\s+/g, '').replace(/,/g, '');
+          return normalizedInput.includes(normAns);
+        });
+
+        if (exactMatch) {
+          isCorrect = true;
+          feedbackText = `✓ Correct. Well done! [${step.marks || 1} ${step.marks === 1 ? 'mark' : 'marks'}]`;
+          errorType = 'none';
+        } else {
+          // Extract numerical value from user's full answer string
+          const numbersInInput = rawInput.match(/-?[0-9]+(?:\.[0-9]+)?/g);
+          const rawNumStr = numbersInInput ? numbersInInput[numbersInInput.length - 1] : null;
+          const parsedVal = rawNumStr ? parseFloat(rawNumStr) : NaN;
+
+          if (!isNaN(parsedVal) && rawNumStr) {
+            // Strict digit-by-digit comparison with accepted answer scheme options
+            const matchesExactSchemeDigits = step.acceptedAnswers.some(ans => {
+              const ansNumMatch = ans.match(/-?[0-9]+(?:\.[0-9]+)?/);
+              if (!ansNumMatch) return false;
+              const expectedNumStr = ansNumMatch[0];
+              return rawNumStr === expectedNumStr;
+            });
+
+            if (matchesExactSchemeDigits) {
+              isCorrect = true;
+              feedbackText = `✓ Correct. Well done! [${step.marks || 1} ${step.marks === 1 ? 'mark' : 'marks'}]`;
+              errorType = 'none';
+            } else {
+              isCorrect = false;
+              errorType = 'calculation';
+              feedbackText = `❌ Incorrect. Check your answers/steps.`;
+            }
+          } else {
+            errorType = 'concept';
+            feedbackText = `❌ Incorrect. Check your answers/steps.`;
+          }
         }
-      };
-      setStepFeedback(newFb);
-      saveQuestionState(selectedQuestionId, {
-        userInputs,
-        stepFeedback: newFb,
-        currentStepIndex,
-        isQuestionFinished,
-        detectorAnswered,
-        detectorSelectedIdx
-      });
+      }
+    }
+
+    const updatedFeedback = {
+      ...stepFeedback,
+      [stepIdx]: {
+        isCorrect,
+        feedbackText,
+        showExplanation: isCorrect || newAttempts >= 3,
+        attempts: newAttempts,
+        activeHintLevel: isCorrect ? 0 : Math.min(newAttempts, 4),
+        isAttemptSubmitted: true,
+        errorType
+      }
+    };
+
+    setStepFeedback(updatedFeedback);
+
+    // Check if total attempt completed
+    const allStepsAttempted = currentQuestion.steps.every((_, i) => 
+      i === stepIdx ? true : (updatedFeedback[i]?.isAttemptSubmitted || updatedFeedback[i]?.isCorrect)
+    );
+
+    const willBeFinished = isCorrect && stepIdx === currentQuestion.steps.length - 1;
+
+    saveQuestionState(currentQuestion.id, {
+      userInputs,
+      stepFeedback: updatedFeedback as any,
+      currentStepIndex,
+      isQuestionFinished: isQuestionFinished || willBeFinished,
+      attemptCompleted: allStepsAttempted || willBeFinished
+    });
+
+    if (isCorrect) {
+      if (stepIdx === currentQuestion.steps.length - 1) {
+        setIsQuestionFinished(true);
+        onUpdateProgress(currentQuestion.id, currentQuestion.totalMarks || 5, true);
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+      } else {
+        setCurrentStepIndex(stepIdx + 1);
+      }
     }
   };
 
-  const handleRequestHint = (stepNumber: number) => {
-    setStepFeedback(prev => {
-      const cur = prev[stepNumber] || {
-        isCorrect: false,
-        feedbackText: '',
-        showExplanation: false,
-        attempts: 0,
-        activeHintLevel: 0,
-        showIncorrectBanner: false
-      };
-      const newFb = {
-        ...prev,
-        [stepNumber]: {
-          ...cur,
-          showIncorrectBanner: false,
-          feedbackText: cur.isCorrect ? cur.feedbackText : '',
-          isBareAnswerWarning: false,
-          activeHintLevel: Math.min(3, cur.activeHintLevel + 1)
-        }
-      };
-      saveQuestionState(selectedQuestionId, {
-        userInputs,
-        stepFeedback: newFb,
-        currentStepIndex,
-        isQuestionFinished,
-        detectorAnswered,
-        detectorSelectedIdx
-      });
-      return newFb;
-    });
+  // Progressive Hint Reveal (1 -> 2 -> 3 -> 4)
+  const handleRevealHint = (stepIdx: number) => {
+    const cur = stepFeedback[stepIdx]?.activeHintLevel || 0;
+    const next = Math.min(cur + 1, 4);
+    setStepFeedback(prev => ({
+      ...prev,
+      [stepIdx]: {
+        ...(prev[stepIdx] || { isCorrect: false, feedbackText: '', showExplanation: false, attempts: 0 }),
+        activeHintLevel: next
+      }
+    }));
   };
 
-  const currentStep = currentQuestion.steps[currentStepIndex];
-  const isQuestionComplete = userProgress.completedQuestions.includes(currentQuestion.id);
+  // Reset current question
+  const handleResetQuestion = () => {
+    if (currentQuestion) {
+      clearQuestionState(currentQuestion.id);
+      setUserInputs({});
+      setStepFeedback({});
+      setCurrentStepIndex(0);
+      setIsQuestionFinished(false);
+      setReflectionSelections({});
+      setEditingSteps({});
+      onUpdateProgress(currentQuestion.id, 0, false);
+    }
+  };
+
+  // Scheme is unlocked ONLY when the full question attempt has been completed step-by-step
+  const isAllStepsAttempted = currentQuestion.steps.every((_, i) => 
+    stepFeedback[i]?.isAttemptSubmitted || stepFeedback[i]?.isCorrect
+  );
+  const isSchemeUnlocked = isQuestionFinished || isAllStepsAttempted;
+  const isQuestionMastered = userProgress.completedQuestions.includes(currentQuestion.id);
+  const completedStepsCount = Object.values(stepFeedback).filter(f => f.isCorrect || f.isAttemptSubmitted).length;
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* Unified Feature Mode Header: Step Solver & PSPM Question Bank */}
-      <div className="bg-white p-3 rounded-2xl border-2 border-purple-200 shadow-xs flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setActiveSubTab('solver')}
-            id="solver-subtab-solver"
-            className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer ${
-              activeSubTab === 'solver'
-                ? 'bg-purple-800 text-white shadow-md'
-                : 'bg-purple-50 text-purple-900 hover:bg-purple-100 border border-purple-200'
-            }`}
-          >
-            <PenTool className="w-4 h-4 text-amber-300" />
-            <span>Interactive Step Solver</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('bank')}
-            id="solver-subtab-bank"
-            className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer ${
-              activeSubTab === 'bank'
-                ? 'bg-purple-800 text-white shadow-md'
-                : 'bg-purple-50 text-purple-900 hover:bg-purple-100 border border-purple-200'
-            }`}
-          >
-            <GraduationCap className="w-4 h-4 text-purple-300" />
-            <span>Tutorial &amp; PSPM Question Bank</span>
-            <span className="bg-emerald-400 text-purple-950 px-2 py-0.5 rounded-full text-[10px] font-extrabold">
-              {questions.length} Qs
-            </span>
-          </button>
-        </div>
-
-        <div className="text-xs text-purple-800 font-bold px-2 flex items-center gap-2">
-          {activeSubTab === 'solver' ? (
-            <button
-              onClick={() => setActiveSubTab('bank')}
-              className="text-purple-700 hover:text-purple-950 underline flex items-center gap-1 cursor-pointer"
-            >
-              <span>Browse All {questions.length} Qs &amp; Mark Schemes</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          ) : (
-            <span className="text-purple-700 font-semibold">
-              Select any question below to solve in the interactive engine
-            </span>
-          )}
-        </div>
-      </div>
-
-      {activeSubTab === 'bank' ? (
-        <PastYearView
-          onLoadQuestionIntoSolver={(qId) => {
-            handleSelectQuestion(qId);
-            setActiveSubTab('solver');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-          completedQuestions={userProgress.completedQuestions}
-        />
-      ) : (
-        <>
-          {/* Top Banner & Question Selector */}
-          <div className="bg-white p-5 rounded-2xl border-2 border-purple-200 shadow-xs space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-purple-100 pb-3">
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 text-xs font-bold mb-1">
-              <PenTool className="w-3.5 h-3.5 text-purple-700" />
-              <span>Interactive Step-by-Step Question Solver</span>
-            </div>
-            <h2 className="text-xl sm:text-2xl font-black text-purple-950">
-              {currentQuestion.number}: {currentQuestion.title}
-            </h2>
-          </div>
-
-          {/* Question Stats Pill */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs px-2.5 py-1 rounded-full bg-purple-50 text-purple-900 border border-purple-200 font-semibold">
-              Marks: {currentQuestion.totalMarks}
-            </span>
-            <span className={`text-xs px-2.5 py-1 rounded-full font-bold border ${
-              currentQuestion.difficulty === 'Foundation'
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                : currentQuestion.difficulty === 'Intermediate'
-                ? 'bg-amber-50 text-amber-800 border-amber-300'
-                : 'bg-purple-50 text-purple-800 border-purple-300'
-            }`}>
-              {currentQuestion.difficulty}
-            </span>
-            {isQuestionComplete && (
-              <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Solved
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Filter controls */}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="font-bold text-purple-900 flex items-center gap-1">
-            <Filter className="w-3.5 h-3.5" /> Filter:
-          </span>
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="p-1.5 rounded-lg border border-purple-200 text-purple-950 text-xs font-medium bg-white"
-          >
-            <option value="all">All Categories ({questions.length})</option>
-            <option value="gene-pool">Gene Pool Counting</option>
-            <option value="hardy-weinberg">Standard Hardy-Weinberg</option>
-            <option value="heterozygotes">Carriers / Heterozygotes</option>
-          </select>
-
-          <select
-            value={difficultyFilter}
-            onChange={(e) => setDifficultyFilter(e.target.value)}
-            className="p-1.5 rounded-lg border border-purple-200 text-purple-950 text-xs font-medium bg-white"
-          >
-            <option value="all">All Difficulties</option>
-            <option value="Foundation">Foundation</option>
-            <option value="Intermediate">Intermediate</option>
-            <option value="Advanced">Advanced</option>
-          </select>
-
-          <div className="ml-auto text-purple-700 font-semibold text-xs">
-            Showing {filteredQuestions.length} of {questions.length} questions
-          </div>
-        </div>
-
-        {/* Question Selector Carousel / Badges */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
-          {filteredQuestions.map((q) => {
-            const isSel = q.id === selectedQuestionId;
-            const isDone = userProgress.completedQuestions.includes(q.id);
-            return (
-              <button
-                key={q.id}
-                onClick={() => handleSelectQuestion(q.id)}
-                className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 ${
-                  isSel
-                    ? 'bg-purple-800 text-white border-purple-900 shadow-xs'
-                    : 'bg-purple-50 text-purple-900 hover:bg-purple-100 border-purple-200'
-                }`}
-              >
-                {isDone && <CheckCircle2 className="w-3 h-3 text-emerald-400" />}
-                <span>{q.number}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Main Grid: Left is Question & Solver, Right is Math Toolbox & Guidance */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Columns: Full Question Text + Detector + Step Solver */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Question Stem Box */}
+    <div className="space-y-6 pb-16">
+      {/* DIRECTORY VIEW: Filterable Question Bank */}
+      {activeViewMode === 'directory' ? (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Main Hero Header */}
           <div className="bg-white p-6 rounded-2xl border-2 border-purple-200 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-purple-100 pb-2">
-              <span className="text-xs font-bold text-purple-600 uppercase tracking-wider">
-                Question Context ({currentQuestion.source})
-              </span>
-              {isQuestionFinished ? (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 text-purple-900 text-xs font-bold border border-purple-200">
+                <GraduationCap className="w-4 h-4 text-purple-700" />
+                <span>TUTORIAL &amp; PSPM QUESTION BANK</span>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs font-semibold text-purple-700 bg-purple-50 px-3 py-1.5 rounded-xl border border-purple-100">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>Completed: {userProgress.completedQuestions.length} / {allQuestions.length}</span>
+              </div>
+            </div>
+
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black text-purple-950 tracking-tight">
+                Tutorial &amp; PSPM Bank
+              </h1>
+              <p className="text-xs sm:text-sm text-purple-800 leading-relaxed mt-1">
+                Select any Matriculation question to solve step-by-step. All answers must include the complete description of the symbol. Complete your attempt to unlock the official marking scheme.
+              </p>
+            </div>
+
+            {/* Filter Controls */}
+            <div className="pt-3 border-t border-purple-100 flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+              {/* Source Filters */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold text-purple-900 uppercase tracking-wider mr-1">Source:</span>
                 <button
-                  onClick={() => setShowFullMarkScheme(!showFullMarkScheme)}
-                  className="text-xs text-purple-800 hover:text-purple-950 font-bold flex items-center gap-1.5 bg-purple-100 hover:bg-purple-200 px-2.5 py-1 rounded-lg border border-purple-300 transition-colors"
+                  onClick={() => setSourceFilter('all')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    sourceFilter === 'all'
+                      ? 'bg-purple-700 text-white shadow-xs'
+                      : 'bg-purple-100 text-purple-800 hover:bg-purple-200'
+                  }`}
                 >
-                  <FileCheck className="w-3.5 h-3.5 text-purple-700" />
-                  {showFullMarkScheme ? 'Hide Official Scheme' : 'View Official Mark Scheme'}
+                  All ({allQuestions.length})
                 </button>
-              ) : (
-                <div 
-                  className="flex items-center gap-1.5 text-[11px] font-semibold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200"
-                  title="Official mark scheme will be unlocked after you submit your calculations and complete the steps"
+                <button
+                  onClick={() => setSourceFilter('Tutorial')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    sourceFilter === 'Tutorial'
+                      ? 'bg-purple-700 text-white shadow-xs'
+                      : 'bg-purple-100 text-purple-800 hover:bg-purple-200'
+                  }`}
                 >
-                  <Lock className="w-3 h-3 text-purple-400" />
-                  <span>Official Scheme Unlocks After Completion</span>
+                  <BookOpen className="w-3.5 h-3.5 text-purple-600" />
+                  Tutorial ({tutorialCount})
+                </button>
+                <button
+                  onClick={() => setSourceFilter('PSPM')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    sourceFilter === 'PSPM'
+                      ? 'bg-purple-700 text-white shadow-xs'
+                      : 'bg-purple-100 text-purple-800 hover:bg-purple-200'
+                  }`}
+                >
+                  <GraduationCap className="w-3.5 h-3.5 text-purple-600" />
+                  PSPM ({pspmCount})
+                </button>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative sm:w-72">
+                <Search className="w-4 h-4 text-purple-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search question, keyword, year..."
+                  className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-purple-200 bg-white text-xs text-purple-950 placeholder-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+            </div>
+
+            {/* Sub-Filters: Topic & Difficulty */}
+            <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-purple-800">
+              <div className="flex items-center gap-1.5">
+                <span className="font-semibold text-purple-900">Topic:</span>
+                <select
+                  value={topicFilter}
+                  onChange={(e) => setTopicFilter(e.target.value)}
+                  className="px-2.5 py-1 rounded-lg border border-purple-200 bg-white text-xs text-purple-950 font-medium focus:outline-none focus:ring-1 focus:ring-purple-400"
+                >
+                  <option value="all">All Topics</option>
+                  <option value="Hardy-Weinberg Equilibrium">Hardy-Weinberg Equilibrium</option>
+                  <option value="Allele Frequency">Allele Frequency</option>
+                  <option value="Genotype Frequency">Genotype Frequency</option>
+                  <option value="Population Changes">Population Changes</option>
+                  <option value="Natural Selection">Natural Selection</option>
+                  <option value="Gene Pool &amp; Counting">Gene Pool &amp; Counting</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <span className="font-semibold text-purple-900">Difficulty:</span>
+                <select
+                  value={difficultyFilter}
+                  onChange={(e) => setDifficultyFilter(e.target.value)}
+                  className="px-2.5 py-1 rounded-lg border border-purple-200 bg-white text-xs text-purple-950 font-medium focus:outline-none focus:ring-1 focus:ring-purple-400"
+                >
+                  <option value="all">All Difficulties</option>
+                  <option value="Basic">Basic</option>
+                  <option value="Foundation">Foundation</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Advanced">Advanced</option>
+                </select>
+              </div>
+
+              {(sourceFilter !== 'all' || topicFilter !== 'all' || difficultyFilter !== 'all' || searchQuery) && (
+                <button
+                  onClick={() => {
+                    setSourceFilter('all');
+                    setTopicFilter('all');
+                    setDifficultyFilter('all');
+                    setSearchQuery('');
+                  }}
+                  className="ml-auto text-purple-600 hover:text-purple-900 underline font-semibold text-xs cursor-pointer"
+                >
+                  Reset Filters
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Question Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filteredQuestions.map((q, idx) => {
+              const isCompleted = userProgress.completedQuestions.includes(q.id);
+              const isTutorial = q.source.toLowerCase().includes('tutorial') || q.sourceType === 'Tutorial';
+
+              return (
+                <div
+                  key={q.id}
+                  className={`bg-white rounded-2xl p-5 border-2 transition-all flex flex-col justify-between space-y-4 hover:shadow-md ${
+                    isCompleted
+                      ? 'border-emerald-200 bg-emerald-50/20'
+                      : 'border-purple-200 hover:border-purple-400'
+                  }`}
+                >
+                  <div className="space-y-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded text-[11px] font-extrabold uppercase ${
+                          isTutorial ? 'bg-blue-100 text-blue-900' : 'bg-amber-100 text-amber-900'
+                        }`}>
+                          {q.source}
+                        </span>
+                        <span className="text-[11px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">
+                          {q.topic || q.category}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded">
+                          {q.totalMarks || 5} marks
+                        </span>
+                        {isCompleted && (
+                          <span className="flex items-center gap-1 text-xs font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                            <Check className="w-3 h-3" /> Solved
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <h3 className="text-base font-extrabold text-purple-950 leading-snug">
+                      {q.number || `Question ${idx + 1}`}: {q.title}
+                    </h3>
+
+                    <p className="text-xs text-purple-900/80 line-clamp-2 leading-relaxed">
+                      {q.questionText}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-purple-100 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs text-purple-700">
+                      <Layers className="w-3.5 h-3.5 text-purple-500" />
+                      <span>{q.steps.length} Interactive Steps</span>
+                    </div>
+
+                    <button
+                      onClick={() => handleOpenQuestion(q.id)}
+                      className="px-4 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
+                    >
+                      <span>{isCompleted ? 'Review & Practice' : 'Start Solving'}</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        /* SOLVER VIEW: Active Question Workspace */
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Top Bar with Back Button */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 sm:p-4 rounded-2xl border border-purple-200 shadow-xs">
+            <button
+              onClick={handleBackToDirectory}
+              className="px-3.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-950 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4 text-purple-700" />
+              <span>Back to Question Bank</span>
+            </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePrevQuestion}
+                disabled={currentIndexInFiltered <= 0}
+                className="px-3 py-1.5 rounded-xl border border-purple-200 bg-white text-purple-900 hover:bg-purple-50 disabled:opacity-30 disabled:cursor-not-allowed font-bold text-xs flex items-center gap-1 cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span>Prev</span>
+              </button>
+
+              <span className="text-xs font-bold text-purple-700">
+                {currentIndexInFiltered + 1} / {filteredQuestions.length}
+              </span>
+
+              <button
+                onClick={handleNextQuestion}
+                disabled={currentIndexInFiltered >= filteredQuestions.length - 1}
+                className="px-3 py-1.5 rounded-xl border border-purple-200 bg-white text-purple-900 hover:bg-purple-50 disabled:opacity-30 disabled:cursor-not-allowed font-bold text-xs flex items-center gap-1 cursor-pointer"
+              >
+                <span>Next</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Active Question Card */}
+          <div className="bg-white rounded-2xl border-2 border-purple-200 shadow-xs overflow-hidden">
+            {/* Header Banner */}
+            <div className="bg-gradient-to-r from-purple-950 via-purple-900 to-indigo-950 text-white p-5 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded bg-purple-800 text-purple-100 text-xs font-bold uppercase border border-purple-700">
+                    {currentQuestion.source}
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded bg-purple-950/70 text-purple-200 text-xs font-semibold">
+                    {currentQuestion.topic || currentQuestion.category}
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded bg-amber-400 text-purple-950 text-xs font-extrabold">
+                    {currentQuestion.difficulty}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-purple-200 bg-purple-950/60 px-3 py-0.5 rounded-full border border-purple-700">
+                    Total Marks: {currentQuestion.totalMarks || 5} marks
+                  </span>
+                  {isQuestionMastered && (
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-white font-black text-xs flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Mastered
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <h2 className="text-xl sm:text-2xl font-black text-white pt-1">
+                {currentQuestion.title}
+              </h2>
+            </div>
+
+            {/* Question Stem Text */}
+            <div className="p-5 sm:p-6 bg-[#FAF9F6] border-b border-purple-100 space-y-3">
+              <div className="text-xs font-bold text-purple-900 uppercase flex items-center gap-1.5">
+                <FileText className="w-4 h-4 text-purple-700" />
+                <span>Question Text &amp; Given Context</span>
+              </div>
+
+              <div className="text-sm sm:text-base text-purple-950 font-medium whitespace-pre-line leading-relaxed bg-white p-4 sm:p-5 rounded-xl border border-purple-200 shadow-2xs">
+                {currentQuestion.questionText}
+              </div>
+
+              {currentQuestion.imageUrl && (
+                <div className="flex flex-col items-center justify-center p-3 bg-white rounded-xl border border-purple-200">
+                  <img src={currentQuestion.imageUrl} alt="Question diagram" className="max-h-56 object-contain rounded" referrerPolicy="no-referrer" />
+                  {currentQuestion.imageCaption && (
+                    <p className="text-xs text-purple-600 italic mt-2">{currentQuestion.imageCaption}</p>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Formatted Question Text */}
-            <div className="text-xs sm:text-sm text-purple-950 font-medium whitespace-pre-line leading-relaxed bg-purple-50/50 p-4 rounded-xl border border-purple-100">
-              {currentQuestion.questionText}
-            </div>
-
-            {/* Question Specimen Image (if provided) */}
-            {currentQuestion.imageUrl && (
-              <div className="flex flex-col sm:flex-row items-center gap-4 bg-purple-50/80 p-3.5 rounded-xl border border-purple-200">
-                <img 
-                  src={currentQuestion.imageUrl} 
-                  alt={currentQuestion.title}
-                  className="w-full sm:w-48 h-32 object-cover rounded-lg border border-purple-300 shadow-2xs shrink-0"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="text-xs text-purple-950 space-y-1">
-                  <div className="font-bold text-purple-900 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                    <span>Biological Specimen Reference</span>
-                  </div>
-                  <p className="text-purple-800 leading-relaxed">
-                    {currentQuestion.imageCaption || 'Visual reference for this question context.'}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Target Concept Pill */}
-            <div className="p-3 bg-purple-100/70 border border-purple-200 rounded-xl text-xs text-purple-900 flex items-start gap-2">
-              <Brain className="w-4 h-4 text-purple-700 shrink-0 mt-0.5" />
-              <div>
-                <strong>Core Syllabus Concept:</strong> {currentQuestion.targetConcept}
-              </div>
-            </div>
-
-            {/* Full Mark Scheme Drawer (if toggled) */}
-            {showFullMarkScheme && (
-              <div className="p-4 bg-purple-950 text-white rounded-xl space-y-2 text-xs animate-in fade-in duration-200">
-                <div className="font-bold text-amber-300 border-b border-purple-800 pb-1 flex items-center justify-between">
-                  <span>Official Answer Scheme:</span>
-                  <span className="font-mono text-purple-300">Total: {currentQuestion.totalMarks} Marks</span>
-                </div>
-                <div className="space-y-1.5 font-mono text-purple-100">
-                  {currentQuestion.officialAnswerScheme.map((item, idx) => (
-                    <div key={idx} className="bg-purple-900/60 p-2 rounded border border-purple-800">
-                      {item}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* STAGE 1: QUESTION DETECTOR (Understand before calculating) */}
-          <div className="bg-white p-6 rounded-2xl border-2 border-purple-200 shadow-xs space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-purple-900 text-white text-xs font-black flex items-center justify-center">
-                1
-              </span>
-              <h3 className="text-base font-bold text-purple-950">
-                Stage 1: Question Detector — "Think First, Calculate Second"
-              </h3>
-            </div>
-            <p className="text-xs text-purple-800">
-              Before touching your calculator, what is the correct strategy for this problem?
-            </p>
-
-            <div className="space-y-2">
-              {currentQuestion.detectorOptions.map((opt, idx) => {
-                const isPicked = detectorSelectedIdx === idx;
-                return (
+            {/* 🧠 YOUR SOLVING PATH (Visual Progress & Quick Jump Bar) */}
+            <div className="p-4 sm:p-5 bg-purple-50/70 border-b border-purple-100 space-y-3 sticky top-0 z-10 backdrop-blur-md bg-purple-50/90 shadow-2xs">
+              <div className="flex items-center justify-between text-xs font-bold text-purple-950">
+                <span className="flex items-center gap-1.5 uppercase tracking-wider">
+                  <Brain className="w-4 h-4 text-purple-700" />
+                  <span>🧠 Your Solving Path</span>
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-purple-700 font-extrabold">
+                    {completedStepsCount} of {currentQuestion.steps.length} Steps Completed
+                  </span>
                   <button
-                    key={idx}
-                    onClick={() => {
-                      setDetectorSelectedIdx(idx);
-                      setDetectorAnswered(true);
-                      saveQuestionState(selectedQuestionId, {
-                        userInputs,
-                        stepFeedback,
-                        currentStepIndex,
-                        isQuestionFinished,
-                        detectorAnswered: true,
-                        detectorSelectedIdx: idx
-                      });
-                    }}
-                    className={`w-full p-3 rounded-xl text-xs font-semibold text-left border transition-all flex items-start gap-2.5 ${
-                      isPicked
-                        ? opt.isCorrect
-                          ? 'bg-emerald-50 border-emerald-400 text-emerald-950 shadow-xs'
-                          : 'bg-red-50 border-red-400 text-red-950 shadow-xs'
-                        : 'bg-white hover:bg-purple-50/70 border-purple-200 text-purple-900'
-                    }`}
+                    type="button"
+                    onClick={handleResetQuestion}
+                    className="px-2.5 py-1 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                    title="Reset all answer boxes and start over"
                   >
-                    <span className="font-mono text-purple-600 font-bold shrink-0">({String.fromCharCode(65 + idx)})</span>
-                    <span className="flex-1">{opt.label}</span>
+                    <RotateCcw className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Reset &amp; Try Again</span>
                   </button>
-                );
-              })}
-            </div>
-
-            {/* Detector Feedback */}
-            {detectorAnswered && detectorSelectedIdx !== null && (
-              <div className={`p-3.5 rounded-xl text-xs leading-relaxed ${
-                currentQuestion.detectorOptions[detectorSelectedIdx].isCorrect
-                  ? 'bg-emerald-100 border border-emerald-300 text-emerald-950'
-                  : 'bg-red-100 border border-red-300 text-red-950'
-              }`}>
-                <strong>{currentQuestion.detectorOptions[detectorSelectedIdx].isCorrect ? '✓ Excellent Assessment! ' : '⚠ Caution: '}</strong>
-                {currentQuestion.detectorOptions[detectorSelectedIdx].feedback}
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* STAGE 2: STEP-BY-STEP INTERACTIVE SOLVER */}
-          <div className="bg-white p-6 rounded-2xl border-2 border-purple-200 shadow-xs space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-purple-100 pb-3 gap-2">
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-purple-900 text-white text-xs font-black flex items-center justify-center">
-                  2
-                </span>
-                <h3 className="text-base font-bold text-purple-950">
-                  Stage 2: Step-by-Step Calculation Engine
-                </h3>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-bold text-purple-700 bg-purple-100 px-2.5 py-1 rounded-md">
-                  Step {Math.min(currentStepIndex + 1, currentQuestion.steps.length)} of {currentQuestion.steps.length}
-                </span>
-                <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-1 rounded-md flex items-center gap-1">
-                  <span>✓ Working Required</span>
-                </span>
-              </div>
-            </div>
+              {/* Step Flow Pills */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+                {currentQuestion.steps.map((st, idx) => {
+                  const fb = stepFeedback[idx];
+                  const isCurrent = idx === currentStepIndex;
+                  const isDone = fb?.isCorrect;
+                  const stageName = getStepStageName(st, idx);
 
-            {/* Matriculation Exam Marking Rule Banner */}
-            <div className="p-3 bg-amber-50/90 border-2 border-amber-300 rounded-xl text-xs text-amber-950 flex items-start gap-2.5 shadow-2xs">
-              <span className="text-base leading-none mt-0.5">📋</span>
-              <div className="space-y-0.5">
-                <span className="font-extrabold text-amber-950 block uppercase tracking-wide text-[11px]">
-                  Matriculation Marking Standard (SB015 Requirement)
-                </span>
-                <p className="text-[12px] text-amber-900 leading-snug">
-                  All symbols <strong>must be written with their description first</strong> in the step calculation (for example, <code className="bg-amber-100/90 px-1.5 py-0.5 rounded font-mono font-bold text-amber-950">Frequency of homozygous recessive genotype, q² = [recessive count] / [total N] = [value]</code>). Use the template button or quick term buttons below to insert the full description!
-                </p>
-              </div>
-            </div>
-
-            {/* Stepper Status Indicators */}
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              {currentQuestion.steps.map((s, sIdx) => {
-                const isPassed = stepFeedback[s.stepNumber]?.isCorrect;
-                const isCurrent = sIdx === currentStepIndex && !isQuestionFinished;
-                return (
-                  <div
-                    key={s.stepNumber}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all border ${
-                      isPassed
-                        ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
-                        : isCurrent
-                        ? 'bg-purple-800 text-white border-purple-900 ring-2 ring-purple-300 shadow-xs'
-                        : 'bg-purple-50 text-purple-700 border-purple-200 opacity-60'
-                    }`}
-                  >
-                    {isPassed ? (
-                      <Check className="w-3.5 h-3.5 stroke-[3]" />
-                    ) : (
-                      <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">
-                        {s.stepNumber}
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => scrollToStep(idx)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition-all cursor-pointer ${
+                        isCurrent
+                          ? 'bg-purple-700 text-white shadow-xs ring-2 ring-purple-400 scale-[1.02]'
+                          : isDone
+                          ? 'bg-emerald-100 text-emerald-950 border border-emerald-300 hover:bg-emerald-200'
+                          : 'bg-white text-purple-900 border border-purple-200 hover:bg-purple-100'
+                      }`}
+                    >
+                      <span className={`w-4 h-4 rounded-full text-[10px] flex items-center justify-center font-extrabold ${
+                        isCurrent ? 'bg-white/20 text-white' : isDone ? 'bg-emerald-600 text-white' : 'bg-purple-200 text-purple-900'
+                      }`}>
+                        {isDone ? '✓' : idx + 1}
                       </span>
-                    )}
-                    <span>Step {s.stepNumber}</span>
-                    {isPassed && <span className="text-[10px] bg-emerald-800 px-1 rounded">✓</span>}
-                  </div>
-                );
-              })}
+                      <span>{stageName}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Step Progress Bar */}
-            <div className="w-full bg-purple-100 h-2 rounded-full overflow-hidden">
-              <div 
-                className="bg-purple-700 h-full transition-all duration-300"
-                style={{ width: `${((currentStepIndex + (isQuestionFinished ? 1 : 0)) / currentQuestion.steps.length) * 100}%` }}
-              />
-            </div>
+            {/* UNIFIED CONTINUOUS STEP-BY-STEP SOLVING WORKSHEET */}
+            <div className="p-5 sm:p-6 space-y-6 bg-white">
+              <div className="text-xs text-purple-700 font-semibold bg-purple-50 p-3 rounded-xl border border-purple-100 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-purple-600 shrink-0" />
+                <span>All solving steps are displayed on this page. Refer to your previous answers above as you calculate each subsequent step!</span>
+              </div>
 
-            {/* Render Steps up to currentStepIndex */}
-            <div className="space-y-5">
-              {currentQuestion.steps.slice(0, currentStepIndex + 1).map((step, idx) => {
-                const fb = stepFeedback[step.stepNumber];
-                const isCurrentActive = idx === currentStepIndex && !isQuestionFinished;
-                const isStepPassed = fb?.isCorrect;
+              <div className="space-y-6 relative">
+                {currentQuestion.steps.map((step, idx) => {
+                  const fb = stepFeedback[idx];
+                  const isCompleted = fb?.isCorrect;
+                  const isEditing = editingSteps[idx];
+                  const isActive = idx === currentStepIndex || isEditing || (!isCompleted && idx === 0);
+                  const standardDesc = getStepStandardDescription(step);
 
-                return (
-                  <div
-                    key={step.stepNumber}
-                    className={`p-5 rounded-2xl border-2 transition-all space-y-3.5 ${
-                      isStepPassed
-                        ? 'bg-emerald-50/40 border-emerald-400'
-                        : isCurrentActive
-                        ? 'bg-purple-50/70 border-purple-400 shadow-xs'
-                        : 'bg-gray-50 border-gray-200 opacity-60'
-                    }`}
-                  >
-                    {/* Step Card Header */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {isStepPassed ? (
-                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-600 text-white font-extrabold text-xs shadow-xs">
-                            <Check className="w-4 h-4 stroke-[3]" />
-                            <span>✓ Step {step.stepNumber} Correct</span>
-                          </div>
-                        ) : (
-                          <span className="px-2.5 py-1 rounded-md bg-purple-200 text-purple-900 font-extrabold text-xs">
-                            Step {step.stepNumber}
+                  return (
+                    <div
+                      key={step.stepNumber}
+                      id={`step-card-${idx}`}
+                      className={`rounded-2xl transition-all ${
+                        isActive
+                          ? 'p-5 sm:p-6 border-2 border-purple-600 bg-white shadow-md ring-4 ring-purple-100'
+                          : isCompleted
+                          ? 'p-5 border-2 border-emerald-300 bg-emerald-50/20 shadow-2xs'
+                          : 'p-4 sm:p-5 border border-purple-200 bg-purple-50/30'
+                      }`}
+                    >
+                      {/* Step Header */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-purple-100">
+                        <div className="flex items-center gap-2.5">
+                          <span className={`px-2.5 py-1 rounded-lg font-black text-xs ${
+                            isCompleted && !isEditing
+                              ? 'bg-emerald-600 text-white'
+                              : isActive
+                              ? 'bg-purple-700 text-white'
+                              : 'bg-purple-200 text-purple-900'
+                          }`}>
+                            {isCompleted && !isEditing ? `✓ Step ${step.stepNumber}` : `Step ${step.stepNumber}`}
                           </span>
-                        )}
-                        <span className="font-bold text-xs sm:text-sm text-purple-950">{step.title}</span>
-                      </div>
-                      <span className="text-xs font-bold text-purple-800 bg-purple-100/80 px-2 py-0.5 rounded">
-                        [{step.marks} {step.marks === 1 ? 'mark' : 'marks'}]
-                      </span>
-                    </div>
+                          <h3 className="text-base font-extrabold text-purple-950">
+                            {step.title}
+                          </h3>
+                        </div>
 
-                    {/* Step Instruction */}
-                    <p className="text-xs sm:text-sm text-purple-950 font-medium bg-white/70 p-3 rounded-xl border border-purple-100 leading-relaxed">
-                      {step.instruction}
-                    </p>
-
-                    {/* Step Answer Box (Multiple Choice Conclusion or Step-by-Step Calculation) */}
-                    <div className={`p-4 rounded-xl border-2 space-y-3 transition-all ${
-                      isStepPassed ? 'bg-emerald-100/40 border-emerald-400' : 'bg-white border-purple-300'
-                    }`}>
-                      {step.isMultipleChoice && step.choiceOptions ? (
-                        /* Multiple Choice Answer Box (For Qualitative / Conclusion steps) */
-                        <div className="space-y-3">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                            <label className="font-extrabold text-xs text-purple-950 flex items-center gap-1.5">
-                              <HelpCircle className="w-3.5 h-3.5 text-purple-700" />
-                              <span>Select Conclusion (Multiple Choice):</span>
-                            </label>
-                            <span className="text-[11px] font-bold text-purple-900 bg-purple-100 border border-purple-300 px-2 py-0.5 rounded-md flex items-center gap-1">
-                              <span>💡 No calculation working required • Select conclusion</span>
+                        <div className="flex items-center gap-2">
+                          {step.marks && (
+                            <span className="text-xs font-bold text-purple-700 bg-purple-100 px-2.5 py-0.5 rounded-md border border-purple-200">
+                              [{step.marks} mark{step.marks > 1 ? 's' : ''}]
                             </span>
-                          </div>
-
-                          {/* Options List */}
-                          <div className="space-y-2 pt-1">
-                            {step.choiceOptions.map((opt, optIdx) => {
-                              const isSelected = (userInputs[step.stepNumber] || '').toLowerCase() === opt.value.toLowerCase() || (userInputs[step.stepNumber] || '').toLowerCase() === opt.label.toLowerCase();
-                              const isOptionPassed = isStepPassed && isSelected;
-                              
-                              return (
-                                <button
-                                  key={optIdx}
-                                  type="button"
-                                  disabled={isStepPassed || !isCurrentActive}
-                                  onClick={() => {
-                                    if (isStepPassed || !isCurrentActive) return;
-                                    setUserInputs(prev => ({ ...prev, [step.stepNumber]: opt.value }));
-                                    checkStep(step, opt.value);
-                                  }}
-                                  className={`w-full p-3.5 rounded-xl text-left text-xs sm:text-sm font-bold border-2 transition-all flex items-start gap-3 cursor-pointer ${
-                                    isOptionPassed
-                                      ? 'bg-emerald-50 border-emerald-500 text-emerald-950 shadow-xs'
-                                      : isSelected && fb?.showIncorrectBanner && !fb.isCorrect
-                                      ? 'bg-red-50 border-red-500 text-red-950'
-                                      : isCurrentActive
-                                      ? 'bg-white hover:bg-purple-50 hover:border-purple-400 border-purple-200 text-purple-950 shadow-2xs active:scale-[0.99]'
-                                      : 'bg-gray-50 border-gray-200 text-gray-700 opacity-60'
-                                  }`}
-                                >
-                                  <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 border ${
-                                    isOptionPassed
-                                      ? 'bg-emerald-600 text-white border-emerald-700'
-                                      : isSelected && fb?.showIncorrectBanner && !fb.isCorrect
-                                      ? 'bg-red-600 text-white border-red-700'
-                                      : 'bg-purple-100 text-purple-900 border-purple-300'
-                                  }`}>
-                                    {isOptionPassed ? '✓' : isSelected && fb?.showIncorrectBanner && !fb.isCorrect ? '✗' : String.fromCharCode(65 + optIdx)}
-                                  </div>
-                                  <div className="flex-1 space-y-1">
-                                    <div className="text-sm font-black tracking-tight">{opt.label}</div>
-                                    {isSelected && isStepPassed && (
-                                      <p className="text-xs text-emerald-800 font-medium leading-relaxed">
-                                        {opt.feedback}
-                                      </p>
-                                    )}
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-
-                          {/* Quick Hint Button for Multiple Choice */}
-                          {!isStepPassed && isCurrentActive && (
-                            <div className="flex items-center justify-between pt-1">
-                              <span className="text-[11px] text-purple-700 font-medium">
-                                Click on the correct conclusion above to submit.
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleRequestHint(step.stepNumber)}
-                                className="px-3 py-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold text-xs border border-purple-300 flex items-center gap-1 cursor-pointer transition-colors"
-                              >
-                                <Lightbulb className="w-3.5 h-3.5 text-amber-600" />
-                                <span>Hint {(fb?.activeHintLevel || 0) > 0 ? `(${fb?.activeHintLevel}/3)` : ''}</span>
-                              </button>
-                            </div>
                           )}
+
+                          {isCompleted && !isEditing ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingSteps(prev => ({ ...prev, [idx]: true }));
+                                setCurrentStepIndex(idx);
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-white hover:bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                            >
+                              <Edit3 className="w-3 h-3 text-purple-600" />
+                              <span>Edit Answer</span>
+                            </button>
+                          ) : isEditing ? (
+                            <button
+                              type="button"
+                              onClick={() => setEditingSteps(prev => ({ ...prev, [idx]: false }))}
+                              className="px-2.5 py-1 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-900 text-xs font-bold transition-all cursor-pointer"
+                            >
+                              Done Editing
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      {/* COMPLETED STEP DISPLAY: Shows submitted answer & working clearly for reference */}
+                      {isCompleted && !isEditing ? (
+                        <div className="pt-4 space-y-3 animate-in fade-in duration-200">
+                          <div className="p-3.5 rounded-xl bg-white border border-emerald-200 space-y-1.5 shadow-2xs">
+                            <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
+                              <span className="flex items-center gap-1.5">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                <span>Your Answer (Full Description Included):</span>
+                              </span>
+                              <span className="text-[11px] bg-emerald-100 text-emerald-950 font-bold px-2 py-0.5 rounded-full">
+                                ✓ Well done!
+                              </span>
+                            </div>
+                            <div className="font-mono text-sm text-purple-950 font-bold bg-emerald-50/50 p-2.5 rounded-lg border border-emerald-100">
+                              {userInputs[idx]}
+                            </div>
+                          </div>
+
+                          <div className="text-xs text-purple-900 bg-purple-50/60 p-3 rounded-xl border border-purple-100 flex items-start gap-2">
+                            <Sparkles className="w-3.5 h-3.5 text-purple-600 shrink-0 mt-0.5" />
+                            <div>
+                              <strong className="text-purple-950">Step Explanation: </strong>
+                              <span>{step.explanation}</span>
+                            </div>
+                          </div>
                         </div>
                       ) : (
-                        /* Standard Calculation Step Answer Box with Working */
-                        <>
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                            <label className="font-extrabold text-xs text-purple-950 flex items-center gap-1.5">
-                              <PenTool className="w-3.5 h-3.5 text-purple-700" />
-                              <span>Step-by-Step Calculation Answer Box:</span>
-                            </label>
-                            <span className="text-[11px] font-bold text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-md flex items-center gap-1">
-                              <span>⚠️ Working required (no bare answers)</span>
-                            </span>
+                        /* ACTIVE / INTERACTIVE STEP SOLVER */
+                        <div className="pt-4 space-y-4">
+                          {/* Step Instruction */}
+                          <div className="text-xs sm:text-sm text-purple-900 leading-relaxed bg-purple-50/60 p-3.5 rounded-xl border border-purple-100">
+                            {step.instruction}
                           </div>
 
-                          {/* Quick Symbol & Scaffold Bar (for active step) */}
-                          {!isStepPassed && isCurrentActive && (
-                            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                              <span className="text-[10px] font-bold text-purple-800 uppercase tracking-wide">Quick Insert:</span>
-                              <button
-                                type="button"
-                                onClick={() => handleInsertScaffoldToStep(step)}
-                                className="px-2.5 py-1 rounded-md bg-purple-800 hover:bg-purple-900 text-white font-bold text-xs flex items-center gap-1 shadow-2xs active:scale-95 transition-all"
-                                title="Insert complete calculation template with symbol description"
-                              >
-                                <span>📝 Insert Step Template (With Description)</span>
-                              </button>
-                              {['q² =', 'q = √', 'p = 1 -', '2pq =', 'p² =', '√', '÷', '×', '=', '²'].map((sym) => (
-                                <button
-                                  key={sym}
-                                  type="button"
-                                  onClick={() => handleInsertSymbolToStep(step.stepNumber, sym)}
-                                  className="px-2 py-0.5 rounded-md bg-purple-100 hover:bg-purple-200 text-purple-900 font-mono font-bold text-xs border border-purple-200 active:scale-95 transition-all"
-                                  title={`Insert ${sym}`}
-                                >
-                                  {sym}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Input or Verified Display */}
-                          {isStepPassed ? (
-                            <div className="p-3 bg-emerald-100/70 border-2 border-emerald-400 rounded-xl space-y-1.5">
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold text-emerald-900 flex items-center gap-1">
-                                  <Check className="w-4 h-4 text-emerald-700 stroke-[3]" />
-                                  <span>Verified Step Calculation (Description + Working):</span>
-                                </span>
-                                <span className="px-2.5 py-0.5 bg-emerald-700 text-white text-[11px] font-extrabold rounded-md flex items-center gap-1">
-                                  <span>✓ [{step.marks} {step.marks === 1 ? 'mark' : 'marks'}]</span>
-                                </span>
+                          {/* Multiple Choice or Text Input */}
+                          {step.isMultipleChoice && step.choiceOptions ? (
+                            <div className="space-y-3 pt-1">
+                              <div className="space-y-2">
+                                {step.choiceOptions.map((opt, cIdx) => {
+                                  const isChosen = (userInputs[idx] || '') === opt.value;
+                                  return (
+                                    <button
+                                      key={cIdx}
+                                      type="button"
+                                      onClick={() => {
+                                        setUserInputs(prev => ({ ...prev, [idx]: opt.value }));
+                                        handleCheckStep(idx, opt.value);
+                                      }}
+                                      className={`w-full p-3.5 rounded-xl border-2 text-left text-xs sm:text-sm transition-all flex items-start gap-2.5 cursor-pointer ${
+                                        isChosen
+                                          ? 'bg-purple-700 text-white font-bold border-purple-800 shadow-xs'
+                                          : 'bg-white hover:bg-purple-50 text-purple-950 border-purple-200'
+                                      }`}
+                                    >
+                                      <div className={`w-4 h-4 rounded-full mt-0.5 border flex items-center justify-center shrink-0 ${
+                                        isChosen ? 'border-white bg-white text-purple-900' : 'border-purple-300'
+                                      }`}>
+                                        {isChosen && <div className="w-2 h-2 rounded-full bg-purple-900" />}
+                                      </div>
+                                      <span className="leading-snug">{opt.label}</span>
+                                    </button>
+                                  );
+                                })}
                               </div>
-                              <div className="font-mono font-bold text-emerald-950 text-sm bg-white/90 p-2.5 rounded-lg border border-emerald-300 leading-relaxed">
-                                {formatStepWithDescription(step, userInputs[step.stepNumber])}
+                              <div className="flex justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() => handleCheckStep(idx)}
+                                  className="px-5 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 active:scale-95 text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                >
+                                  <Check className="w-4 h-4" />
+                                  <span>Check Answer</span>
+                                </button>
                               </div>
                             </div>
                           ) : (
-                            <div className="space-y-1.5">
+                            <div className="space-y-3 pt-1">
+                              {/* 1. Complete Symbol Description Notice & Quick Insert */}
+                              {standardDesc.fullPrefix && (
+                                <div className="p-3 rounded-xl bg-purple-50 border border-purple-200 space-y-2">
+                                  <div className="flex flex-wrap items-center justify-between gap-1.5">
+                                    <span className="text-xs font-extrabold text-purple-950 flex items-center gap-1.5">
+                                      <Edit3 className="w-3.5 h-3.5 text-purple-700" />
+                                      <span>Matriculation Requirement: Full Symbol Description Required</span>
+                                    </span>
+                                    <span className="text-[11px] text-rose-700 font-bold">
+                                      (No bare answers or bare symbols)
+                                    </span>
+                                  </div>
+
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-xs text-purple-800">Quick-Insert Template:</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleInsertFullDescription(standardDesc.fullPrefix, idx)}
+                                      className="px-3 py-1.5 rounded-lg bg-white hover:bg-purple-100 text-purple-900 font-bold font-mono text-xs border border-purple-300 shadow-2xs transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                                    >
+                                      <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                                      <span>+ {standardDesc.fullPrefix}</span>
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* 2. Quick Math Symbols Toolbar */}
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="text-[11px] font-bold text-purple-800 flex items-center gap-1">
+                                  <Calculator className="w-3.5 h-3.5 text-purple-600" /> Math Symbols:
+                                </span>
+                                {['√', '²', 'p²', 'q²', '2pq', 'p', 'q', '+', '-', '1 - q', '100', '%'].map(sym => (
+                                  <button
+                                    key={sym}
+                                    type="button"
+                                    onClick={() => handleInsertSymbol(sym, idx)}
+                                    className="px-2.5 py-1 bg-purple-100 hover:bg-purple-200 text-purple-950 font-mono text-xs font-bold rounded-lg border border-purple-200 active:scale-95 cursor-pointer transition-colors"
+                                  >
+                                    {sym}
+                                  </button>
+                                ))}
+                              </div>
+
+                              {/* 3. Text Input Field */}
                               <div className="flex flex-col sm:flex-row gap-2">
                                 <input
-                                  ref={isCurrentActive ? activeInputRef : undefined}
+                                  ref={(el) => { inputRefs.current[idx] = el; }}
                                   type="text"
-                                  value={userInputs[step.stepNumber] || ''}
-                                  onChange={(e) => handleInputChange(step.stepNumber, e.target.value)}
+                                  value={userInputs[idx] || ''}
+                                  onChange={(e) => setUserInputs(prev => ({ ...prev, [idx]: e.target.value }))}
                                   onKeyDown={(e) => {
-                                    if (e.key === 'Enter') checkStep(step);
+                                    if (e.key === 'Enter') handleCheckStep(idx);
                                   }}
-                                  placeholder={`Format e.g. ${getExampleStepText(step)}`}
-                                  className={`flex-1 px-3.5 py-2.5 rounded-xl border font-mono text-xs sm:text-sm focus:ring-2 focus:outline-hidden shadow-2xs transition-colors min-h-[42px] ${
-                                    fb?.showIncorrectBanner && !fb.isCorrect && !fb.isBareAnswerWarning
-                                      ? 'border-red-500 ring-2 ring-red-200 bg-red-50/50 text-red-950 focus:ring-red-500'
-                                      : 'border-purple-300 bg-white text-purple-950 focus:ring-purple-500'
-                                  }`}
+                                  placeholder={standardDesc.fullPrefix ? `e.g. ${standardDesc.fullPrefix}0.0008` : "Enter step with description and value..."}
+                                  className="flex-1 px-3.5 py-2.5 rounded-xl border-2 font-mono text-sm text-purple-950 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white border-purple-200 shadow-2xs"
                                 />
-                                <div className="flex items-center gap-2 w-full sm:w-auto">
-                                  {fb?.showIncorrectBanner && !fb.isCorrect && !fb.isBareAnswerWarning && (
-                                    <span className="px-2.5 py-2 bg-red-600 text-white font-extrabold text-xs rounded-xl flex items-center gap-1 shrink-0 shadow-2xs min-h-[42px]">
-                                      <span>✗</span>
-                                      <span className="inline">Incorrect</span>
-                                    </span>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() => checkStep(step)}
-                                    className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs shadow-xs active:scale-95 whitespace-nowrap flex items-center justify-center gap-1.5 min-h-[42px] cursor-pointer"
-                                  >
-                                    <Check className="w-4 h-4" />
-                                    <span>Check Step</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRequestHint(step.stepNumber)}
-                                    className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 font-semibold text-xs border border-purple-300 flex items-center justify-center gap-1 min-h-[42px] cursor-pointer"
-                                    title="Get progressive hint"
-                                  >
-                                    <Lightbulb className="w-3.5 h-3.5 text-amber-600" />
-                                    <span>Hint {(fb?.activeHintLevel || 0) > 0 ? `(${fb?.activeHintLevel}/3)` : ''}</span>
-                                  </button>
-                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleCheckStep(idx)}
+                                  className="px-5 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 active:scale-95 text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                                >
+                                  <Check className="w-4 h-4" />
+                                  <span>Check Step</span>
+                                </button>
                               </div>
-                              <p className="text-[11px] text-purple-800 font-medium leading-normal">
-                                Exam Standard Format: State description first, then symbol &amp; substitution structure (e.g. <span className="font-mono font-bold text-purple-950">{getExampleStepText(step)}</span>)
-                              </p>
                             </div>
                           )}
-                        </>
+
+                          {/* Step Feedback Box */}
+                          {fb?.feedbackText && (
+                            <div className={`p-3.5 rounded-xl text-xs sm:text-sm leading-relaxed flex items-start gap-2.5 ${
+                              fb.isCorrect
+                                ? 'bg-emerald-100 text-emerald-950 border border-emerald-300'
+                                : 'bg-rose-100 text-rose-950 border border-rose-300'
+                            }`}>
+                              {fb.isCorrect ? (
+                                <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                              ) : (
+                                <XCircle className="w-4 h-4 text-rose-700 shrink-0 mt-0.5" />
+                              )}
+                              <span>{fb.feedbackText}</span>
+                            </div>
+                          )}
+
+                          {/* Progressive Guidance Hints Section */}
+                          <div className="pt-2 border-t border-purple-100 space-y-2">
+                            <button
+                              type="button"
+                              onClick={() => handleRevealHint(idx)}
+                              className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-700 hover:text-purple-950 cursor-pointer"
+                            >
+                              <Lightbulb className="w-4 h-4 text-amber-500" />
+                              <span>
+                                {(fb?.activeHintLevel || 0) === 0 ? "💡 Need a hint?" : `💡 Show Next Guidance Hint (${fb?.activeHintLevel || 0}/4)`}
+                              </span>
+                            </button>
+
+                            {(fb?.activeHintLevel || 0) >= 1 && (
+                              <div className="space-y-2 pt-1 animate-in fade-in duration-200">
+                                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-950 text-xs">
+                                  <span className="font-bold text-amber-900">Hint 1 (Conceptual clue): </span>
+                                  {step.hint1}
+                                </div>
+                                {(fb?.activeHintLevel || 0) >= 2 && (
+                                  <div className="p-3 rounded-xl bg-amber-100/70 border border-amber-300 text-amber-950 text-xs">
+                                    <span className="font-bold text-amber-900">Hint 2 (Formula clue): </span>
+                                    {step.hint2}
+                                  </div>
+                                )}
+                                {(fb?.activeHintLevel || 0) >= 3 && (
+                                  <div className="p-3 rounded-xl bg-amber-200/60 border border-amber-400 text-amber-950 text-xs">
+                                    <span className="font-bold text-amber-900">Hint 3 (Substitution guidance): </span>
+                                    {step.hint3}
+                                  </div>
+                                )}
+                                {(fb?.activeHintLevel || 0) >= 4 && (
+                                  <div className="p-3 rounded-xl bg-amber-300/60 border border-amber-500 text-amber-950 text-xs">
+                                    <span className="font-bold text-amber-900">Hint 4 (Calculation guidance): </span>
+                                    {step.hint4 || step.explanation}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       )}
                     </div>
+                  );
+                })}
+              </div>
+            </div>
 
-                    {/* Warning Banner when Bare Answer is Provided without Steps */}
-                    {fb?.isBareAnswerWarning && (
-                      <div className="p-3.5 bg-amber-50 border-2 border-amber-400 rounded-xl space-y-2 text-xs text-amber-950 shadow-2xs animate-in fade-in duration-200">
-                        <div className="font-black text-amber-900 flex items-center gap-1.5">
-                          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                          <span>Working Required — Final Answers Alone Are Not Allowed!</span>
-                        </div>
-                        <p className="leading-relaxed font-medium">{fb.feedbackText}</p>
-                        <div className="pt-1 flex items-center gap-2">
-                          <button
-                            onClick={() => handleInsertScaffoldToStep(step)}
-                            className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs active:scale-95"
-                          >
-                            <span>📝 Insert Step Template</span>
-                          </button>
-                        </div>
-                      </div>
-                    )}
+            {/* ANSWER SCHEME SECTION (Locked strictly until required step attempt completed) */}
+            <div className="p-5 sm:p-6 bg-[#FAF9F6] border-t-2 border-purple-200 space-y-4">
+              <div className="flex items-center gap-2">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                  isSchemeUnlocked ? 'bg-emerald-600 text-white' : 'bg-purple-900 text-white'
+                }`}>
+                  {isSchemeUnlocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                </div>
+                <h3 className="text-base sm:text-lg font-black text-purple-950">
+                  {isSchemeUnlocked ? '🔓 Official Answer Scheme & Marking Breakdown' : '🔒 Answer Scheme Locked'}
+                </h3>
+              </div>
 
-                    {/* Progressive Hint Drawer - Guidance Only */}
-                    {(fb?.activeHintLevel || 0) > 0 && !isStepPassed && (
-                      <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl space-y-1.5 text-xs text-amber-950 animate-in fade-in duration-150 shadow-2xs">
-                        <div className="font-bold text-amber-900 flex items-center gap-1.5">
-                          <Lightbulb className="w-4 h-4 text-amber-600" />
-                          <span>Step Guidance (Hint Level {fb?.activeHintLevel} of 3):</span>
-                        </div>
-                        {fb?.activeHintLevel >= 1 && <div>• <strong>Level 1 (Concept Guidance):</strong> {step.hint1}</div>}
-                        {fb?.activeHintLevel >= 2 && <div>• <strong>Level 2 (Formula Guidance):</strong> {step.hint2}</div>}
-                        {fb?.activeHintLevel >= 3 && <div>• <strong>Level 3 (Working Guidance):</strong> {step.hint3}</div>}
-                      </div>
-                    )}
+              {!isSchemeUnlocked ? (
+                <div className="p-6 rounded-2xl bg-white border-2 border-dashed border-purple-300 text-center space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center mx-auto">
+                    <Lock className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="font-extrabold text-sm sm:text-base text-purple-950">
+                      Complete Your Step-by-Step Attempt to Unlock
+                    </h4>
+                    <p className="text-xs text-purple-800 max-w-md mx-auto">
+                      Work through every interactive step above. Complete your solving attempt to unlock the official Matriculation answer scheme, full mathematical working, and error diagnostics.
+                    </p>
+                  </div>
+                  <div className="text-xs font-bold text-purple-700 bg-purple-50 inline-block px-3 py-1 rounded-full border border-purple-200">
+                    Progress: {completedStepsCount} / {currentQuestion.steps.length} steps attempted
+                  </div>
+                </div>
+              ) : (
+                /* UNLOCKED ANSWER SCHEME WITH COMPARISON & ERROR ANALYSIS */
+                <div className="space-y-5 animate-in fade-in duration-300">
+                  {/* Notice Banner */}
+                  <div className="p-3.5 rounded-xl bg-emerald-100 border border-emerald-300 text-emerald-950 text-xs font-bold flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                    <span>You completed the required attempt! Compare your working with the official Matriculation marking scheme.</span>
+                  </div>
 
-                    {/* Step Feedback Banner: Correct Step with allocated mark */}
-                    {fb?.isCorrect && (
-                      <div className="p-3.5 rounded-xl bg-emerald-100 border-2 border-emerald-400 text-emerald-950 space-y-1.5 animate-in zoom-in-95 duration-200 shadow-2xs">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
-                            ✓
+                  {/* 1. Official Solution Card */}
+                  <div className="p-5 rounded-2xl bg-white border-2 border-emerald-300 shadow-xs space-y-3">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-950 text-xs font-black">
+                      <Check className="w-4 h-4 text-emerald-700" />
+                      <span>OFFICIAL MARKING SCHEME</span>
+                    </div>
+
+                    <div className="space-y-2 pt-1">
+                      {currentQuestion.officialAnswerScheme?.map((schemeLine, idx) => (
+                        <div 
+                          key={idx}
+                          className="p-3 rounded-xl bg-purple-50/50 border border-purple-100 text-xs sm:text-sm text-purple-950 flex items-start gap-2.5 font-mono"
+                        >
+                          <div className="w-5 h-5 rounded-full bg-purple-700 text-white text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5 font-sans">
+                            {idx + 1}
                           </div>
-                          <span className="font-black text-emerald-950 text-sm">
-                            ✓ Correct Step! Well done! [{step.marks} {step.marks === 1 ? 'mark' : 'marks'}]
-                          </span>
+                          <span className="leading-relaxed flex-1">{schemeLine}</span>
                         </div>
-                        <div className="text-xs text-emerald-900 pl-8 leading-relaxed font-medium">
-                          <strong>Official Mark Scheme:</strong> {step.explanation}
-                        </div>
-                      </div>
-                    )}
+                      ))}
+                    </div>
 
-                    {/* Incorrect Feedback with Wrong Symbol (✗) - Never reveals the official answer */}
-                    {fb?.showIncorrectBanner && !fb.isCorrect && !fb.isBareAnswerWarning && (
-                      <div className="p-3.5 rounded-xl bg-red-100 border-2 border-red-400 text-red-950 animate-in zoom-in-95 duration-200 shadow-2xs">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
-                            ✗
-                          </div>
-                          <span className="font-black text-red-950 text-sm">
-                            ✗ Incorrect! Please check your answers/steps.
-                          </span>
-                        </div>
+                    {currentQuestion.finalAnswerText && (
+                      <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950 text-xs sm:text-sm font-semibold">
+                        <span className="font-bold">Final Summary: </span>
+                        {currentQuestion.finalAnswerText}
                       </div>
                     )}
                   </div>
-                );
-              })}
-            </div>
 
-            {/* Question Completed Celebration Banner */}
-            {isQuestionFinished && (
-              <div className="p-5 bg-gradient-to-r from-purple-900 via-purple-800 to-emerald-900 text-white rounded-2xl space-y-3 animate-in zoom-in-95 duration-200 shadow-md">
-                <div className="flex items-center gap-2 text-amber-300 font-extrabold text-base">
-                  <Award className="w-6 h-6" />
-                  <span>QUESTION COMPLETE! FULL MARKS AWARDED: {currentQuestion.totalMarks}/{currentQuestion.totalMarks}</span>
+                    {/* 2. 🔍 CHECK YOUR WORK (Error Analysis) */}
+                    <div className="p-5 rounded-2xl bg-white border-2 border-purple-200 space-y-3">
+                      <div className="flex items-center gap-2 text-purple-950 font-black text-sm sm:text-base">
+                        <Search className="w-4 h-4 text-purple-700" />
+                        <span>🔍 Check Your Work (Error Analysis)</span>
+                      </div>
+
+                      <p className="text-xs text-purple-800">
+                        Compare your inputs with the expected values to pinpoint any calculation or conceptual slips:
+                      </p>
+
+                      <div className="space-y-2 pt-1">
+                        {currentQuestion.steps.map((st, i) => {
+                          const inputVal = (userInputs[i] || '').trim() || '—';
+                          const fb = stepFeedback[i];
+                          
+                          // Determine if user's input matches expected answer
+                          let isStepMatch = false;
+                          if (fb && typeof fb.isCorrect === 'boolean') {
+                            isStepMatch = fb.isCorrect;
+                          } else if (inputVal !== '—') {
+                            if (st.isMultipleChoice && st.choiceOptions) {
+                              const chosen = st.choiceOptions.find(o => o.value.toLowerCase() === inputVal.toLowerCase() || o.label.toLowerCase() === inputVal.toLowerCase());
+                              isStepMatch = !!chosen?.isCorrect || st.acceptedAnswers.some(ans => inputVal.toLowerCase().includes(ans.toLowerCase()));
+                            } else {
+                              const numbersInInput = inputVal.match(/-?[0-9]+(?:\.[0-9]+)?/g);
+                              const rawNumStr = numbersInInput ? numbersInInput[numbersInInput.length - 1] : null;
+                              if (rawNumStr) {
+                                isStepMatch = st.acceptedAnswers.some(ans => {
+                                  const ansNumMatch = ans.match(/-?[0-9]+(?:\.[0-9]+)?/);
+                                  return ansNumMatch ? rawNumStr === ansNumMatch[0] : false;
+                                });
+                              } else {
+                                const normInput = inputVal.toLowerCase().replace(/\s+/g, '');
+                                isStepMatch = st.acceptedAnswers.some(ans => normInput.includes(ans.toLowerCase().replace(/\s+/g, '')));
+                              }
+                            }
+                          }
+
+                          return (
+                            <div 
+                              key={i} 
+                              className={`p-3 rounded-xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-colors ${
+                                isStepMatch 
+                                  ? 'border-emerald-200 bg-emerald-50/40' 
+                                  : 'border-rose-200 bg-rose-50/40'
+                              }`}
+                            >
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-purple-950">Step {st.stepNumber}: {st.title}</span>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-purple-900">
+                                  <span>Your Input: <strong className={`font-mono px-1.5 py-0.5 rounded ${isStepMatch ? 'bg-emerald-100/70 text-emerald-950' : 'bg-rose-100/70 text-rose-950'}`}>{inputVal}</strong></span>
+                                  <span className="text-purple-400">|</span>
+                                  <span>Expected: <strong className="font-mono text-purple-950 bg-purple-100/60 px-1.5 py-0.5 rounded">{st.acceptedAnswers[0]}</strong></span>
+                                </div>
+                              </div>
+
+                              <span className={`px-2.5 py-1 rounded-full font-bold text-[11px] inline-flex items-center gap-1 shrink-0 self-start sm:self-auto border ${
+                                isStepMatch 
+                                  ? 'bg-emerald-100 text-emerald-950 border-emerald-300' 
+                                  : 'bg-rose-100 text-rose-950 border-rose-300'
+                              }`}>
+                                {isStepMatch ? '✓ Match' : '❌ Not Match'}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                  {/* 3. 🧠 QUICK REFLECTION */}
+                  <div className="p-5 rounded-2xl bg-white border-2 border-purple-200 space-y-3">
+                    <div className="flex items-center gap-2 text-purple-950 font-black text-sm sm:text-base">
+                      <Brain className="w-4 h-4 text-purple-700" />
+                      <span>🧠 Quick Reflection</span>
+                    </div>
+
+                    <p className="text-xs text-purple-800">
+                      What did you learn from this question? Select all that apply:
+                    </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs">
+                      {[
+                        "I understood the concept and full symbol description requirements.",
+                        "I need to review the formula (p + q = 1 vs p² + 2pq + q² = 1).",
+                        "I made a calculation / arithmetic mistake.",
+                        "I confused allele frequency (p, q) with genotype frequency (p², q²).",
+                        "I need more practice writing full step-by-step descriptions."
+                      ].map((text, rIdx) => {
+                        const isChecked = !!reflectionSelections[text];
+                        return (
+                          <button
+                            key={rIdx}
+                            onClick={() => setReflectionSelections(prev => ({ ...prev, [text]: !prev[text] }))}
+                            className={`p-3 rounded-xl border text-left transition-all flex items-start gap-2.5 cursor-pointer ${
+                              isChecked
+                                ? 'bg-purple-100/70 border-purple-400 text-purple-950 font-bold'
+                                : 'bg-purple-50/40 border-purple-100 text-purple-900 hover:bg-purple-50'
+                            }`}
+                          >
+                            <div className={`w-4 h-4 rounded mt-0.5 border flex items-center justify-center shrink-0 ${
+                              isChecked ? 'border-purple-700 bg-purple-700 text-white' : 'border-purple-300'
+                            }`}>
+                              {isChecked && <Check className="w-3 h-3" />}
+                            </div>
+                            <span>{text}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 4. Action & Navigation Buttons */}
+                  <div className="p-4 bg-white rounded-2xl border border-purple-200 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={handleSimilarQuestion}
+                        className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-950 font-bold text-xs border border-purple-200 transition-colors cursor-pointer"
+                      >
+                        [Similar Question]
+                      </button>
+
+                      <button
+                        onClick={() => handleNextSameSource('PSPM')}
+                        className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-950 font-bold text-xs border border-purple-200 transition-colors cursor-pointer"
+                      >
+                        [Next PSPM Question]
+                      </button>
+
+                      <button
+                        onClick={() => handleNextSameSource('Tutorial')}
+                        className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-950 font-bold text-xs border border-purple-200 transition-colors cursor-pointer"
+                      >
+                        [Next Tutorial Question]
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2 ml-auto">
+                      <button
+                        onClick={handleResetQuestion}
+                        className="px-3 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-purple-600" />
+                        <span>Reset &amp; Try Again</span>
+                      </button>
+
+                      <button
+                        onClick={handleBackToDirectory}
+                        className="px-4 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs transition-colors cursor-pointer"
+                      >
+                        [Back to Question Bank]
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-xs sm:text-sm text-purple-100 leading-relaxed">
-                  {currentQuestion.finalAnswerText}
-                </p>
-                <div className="pt-2 flex flex-wrap gap-2">
-                  <button
-                    onClick={() => {
-                      const nextQ = questions.find(q => !userProgress.completedQuestions.includes(q.id)) || questions[0];
-                      handleSelectQuestion(nextQ.id);
-                    }}
-                    className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-extrabold text-xs shadow-xs transition-all flex items-center gap-1.5"
-                  >
-                    <span>Next Question</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      clearQuestionState(currentQuestion.id);
-                      setUserInputs({});
-                      setStepFeedback({});
-                      setCurrentStepIndex(0);
-                      setIsQuestionFinished(false);
-                      setDetectorAnswered(false);
-                      setDetectorSelectedIdx(null);
-                      setShowFullMarkScheme(false);
-                    }}
-                    className="px-3.5 py-2 rounded-xl bg-purple-800 hover:bg-purple-700 text-purple-200 text-xs font-semibold flex items-center gap-1 cursor-pointer"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Try Again</span>
-                  </button>
-                  <button
-                    onClick={() => setShowFullMarkScheme(prev => !prev)}
-                    className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-purple-950 text-xs font-extrabold flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95 transition-all"
-                  >
-                    <FileCheck className="w-3.5 h-3.5" />
-                    <span>✓ UNLOCKED — {showFullMarkScheme ? 'Hide Official Scheme' : 'View Official Mark Scheme & Allocation'}</span>
-                  </button>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
-
-        {/* Right 1 Column: Docked Math Toolbox & Quick Tips */}
-        <div className="space-y-4">
-          <MathToolbox lastActiveInputRef={activeInputRef} />
-
-          {/* Quick Rules Cheatsheet */}
-          <div className="bg-white p-4 rounded-xl border border-purple-200 shadow-2xs space-y-2.5 text-xs text-purple-950">
-            <div className="font-bold text-purple-900 border-b border-purple-100 pb-1 flex items-center gap-1.5">
-              <AlertTriangle className="w-4 h-4 text-amber-600" />
-              <span>Exam Working Standards</span>
-            </div>
-            <ul className="space-y-1 text-purple-800 text-[11px] leading-snug list-disc pl-4">
-              <li>Always identify homozygous recessive trait <strong>q²</strong> first!</li>
-              <li>State the formula: e.g. <span className="font-mono">q² = ...</span> then <span className="font-mono">q = √q²</span>.</li>
-              <li>Write units (e.g. <span className="font-mono">... individuals</span> or <span className="font-mono">... flies</span>) when asked for counts.</li>
-              <li>If population size &lt;100: 1 d.p.; 100-999: 2 d.p.; &ge;1000: 3 d.p.</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-        </>
       )}
     </div>
   );

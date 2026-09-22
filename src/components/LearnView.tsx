@@ -1263,7 +1263,7 @@ export const LearnView: React.FC = () => {
                 <li>Identify any information about recessive traits; <strong>always begin by calculating q²</strong>.</li>
                 <li><strong>NEVER START</strong> with dominant trait information, because the dominant phenotype is comprised of two distinct genotypes: <span className="font-mono font-bold">p² + 2pq</span>.</li>
                 <li>Number of heterozygous individuals / carriers = <span className="font-mono font-bold">2pq × N</span>.</li>
-                <li>Percentage of carriers = <span className="font-mono font-bold">2pq × 100%</span>.</li>
+                <li>Percentage of carriers = <span className="font-mono font-bold">2pq × 100</span>.</li>
                 <li>Number of individuals with dominant trait = <span className="font-mono font-bold">(p² + 2pq) × N</span>.</li>
               </ul>
             </div>

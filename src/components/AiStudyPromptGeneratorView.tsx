@@ -313,11 +313,6 @@ export const AiStudyPromptGeneratorView: React.FC = () => {
 
   // Reset / Start Over
   const handleStartOver = () => {
-    if (question.trim().length > 50 || uploadedImages.length > 0) {
-      if (!window.confirm('Are you sure you want to reset your inputs and start over?')) {
-        return;
-      }
-    }
     setQuestion('');
     setStudentWorking('');
     setUploadedImages([]);

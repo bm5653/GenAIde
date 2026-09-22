@@ -154,12 +154,12 @@ export const FORMULA_MEMORY_DRILLS = [
   },
   {
     question: "The question asks for the 'percentage of individuals with dominant phenotype'.",
-    correctChoice: "(p² + 2pq) × 100% or (1 - q²) × 100%",
+    correctChoice: "(p² + 2pq) × 100 or (1 - q²) × 100",
     choices: [
-      { label: "p² × 100%", isCorrect: false, explanation: "p² only accounts for homozygous dominant; dominant phenotype also includes heterozygotes (2pq)!" },
-      { label: "(p² + 2pq) × 100%", isCorrect: true, explanation: "Correct! Individuals showing the dominant trait include BOTH homozygous dominant (p²) and heterozygous (2pq)." },
-      { label: "2pq × 100%", isCorrect: false, explanation: "2pq is only the heterozygous fraction, missing the homozygous dominant individuals." },
-      { label: "p × 100%", isCorrect: false, explanation: "p is an allele frequency, not a phenotype frequency." }
+      { label: "p² × 100", isCorrect: false, explanation: "p² only accounts for homozygous dominant; dominant phenotype also includes heterozygotes (2pq)!" },
+      { label: "(p² + 2pq) × 100", isCorrect: true, explanation: "Correct! Individuals showing the dominant trait include BOTH homozygous dominant (p²) and heterozygous (2pq)." },
+      { label: "2pq × 100", isCorrect: false, explanation: "2pq is only the heterozygous fraction, missing the homozygous dominant individuals." },
+      { label: "p × 100", isCorrect: false, explanation: "p is an allele frequency, not a phenotype frequency." }
     ]
   },
   {

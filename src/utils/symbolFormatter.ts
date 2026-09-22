@@ -1,8 +1,115 @@
+import { StepItem } from '../types';
+
 /**
  * Utility to format mathematical and population genetics symbols cleanly.
  * Converts raw LaTeX expressions, ASCII formulas, sqrt, and exponents into
  * official curriculum-standard Unicode symbols (e.g. q², p², 2pq, √q², →, ×, etc.).
  */
+
+export function getStandardFullDescription(
+  step: StepItem,
+  questionText?: string
+): { fullPrefix: string; description: string; symbol: string } {
+  const symbol = step.expectedSymbol || '';
+  const desc = step.symbolDescription || '';
+  const title = step.title || '';
+  const instruction = step.instruction || '';
+  const concept = step.expectedConcept || '';
+
+  // 1. If step.symbolDescription exists, use it directly as specified
+  if (desc) {
+    if (symbol) {
+      return {
+        fullPrefix: `${desc}, ${symbol} = `,
+        description: desc,
+        symbol
+      };
+    } else {
+      return {
+        fullPrefix: `${desc} = `,
+        description: desc,
+        symbol: ''
+      };
+    }
+  }
+
+  const combined = `${title} ${instruction} ${concept} ${questionText || ''}`.toLowerCase();
+
+  // 2. Check for "number of ..." phrasing in step or question
+  if (combined.includes('number of')) {
+    const match = (title + ' ' + instruction + ' ' + concept).match(/number of\s+([a-z0-9\s-]+?)(?=\s+(?:in|for|of|is|are|with|who|to|from|\.|\,|$))/i) ||
+                  (questionText || '').match(/number of\s+([a-z0-9\s-]+?)(?=\s+(?:in|for|of|is|are|with|who|to|from|\.|\,|$))/i) ||
+                  title.match(/number of [a-z0-9\s-]+/i) ||
+                  concept.match(/number of [a-z0-9\s-]+/i);
+    if (match) {
+      let raw = match[0].trim();
+      const capitalized = raw.charAt(0).toUpperCase() + raw.slice(1);
+      return {
+        fullPrefix: `${capitalized}${symbol ? `, ${symbol}` : ''} = `,
+        description: capitalized,
+        symbol: symbol || ''
+      };
+    }
+  }
+
+  // 3. Check for "percentage of ..." phrasing
+  if (combined.includes('percentage of')) {
+    const match = (title + ' ' + instruction + ' ' + concept).match(/percentage of\s+([a-z0-9\s-]+?)(?=\s+(?:in|for|of|is|are|with|who|to|from|\.|\,|$))/i) ||
+                  (questionText || '').match(/percentage of\s+([a-z0-9\s-]+?)(?=\s+(?:in|for|of|is|are|with|who|to|from|\.|\,|$))/i);
+    if (match) {
+      let raw = match[0].trim();
+      const capitalized = raw.charAt(0).toUpperCase() + raw.slice(1);
+      return {
+        fullPrefix: `${capitalized} = `,
+        description: capitalized,
+        symbol: ''
+      };
+    }
+  }
+
+  // 4. Standard Hardy-Weinberg terms
+  if (concept.includes('q²') || title.includes('q²') || combined.includes('homozygous recessive')) {
+    return {
+      fullPrefix: 'Frequency of homozygous recessive genotype, q² = ',
+      description: 'Frequency of homozygous recessive genotype',
+      symbol: 'q²'
+    };
+  }
+  if (concept.includes('p²') || title.includes('p²') || combined.includes('homozygous dominant')) {
+    return {
+      fullPrefix: 'Frequency of homozygous dominant genotype, p² = ',
+      description: 'Frequency of homozygous dominant genotype',
+      symbol: 'p²'
+    };
+  }
+  if (concept.includes('2pq') || title.includes('2pq') || combined.includes('heterozyg') || combined.includes('carrier')) {
+    return {
+      fullPrefix: 'Frequency of heterozygous genotype, 2pq = ',
+      description: 'Frequency of heterozygous genotype',
+      symbol: '2pq'
+    };
+  }
+  if (symbol === 'q' || concept.startsWith('q =') || title.includes('q ') || combined.includes('recessive allele')) {
+    return {
+      fullPrefix: 'Frequency of recessive allele, q = ',
+      description: 'Frequency of recessive allele',
+      symbol: 'q'
+    };
+  }
+  if (symbol === 'p' || concept.startsWith('p =') || title.includes('p ') || combined.includes('dominant allele')) {
+    return {
+      fullPrefix: 'Frequency of dominant allele, p = ',
+      description: 'Frequency of dominant allele',
+      symbol: 'p'
+    };
+  }
+
+  return {
+    fullPrefix: '',
+    description: '',
+    symbol: ''
+  };
+}
 
 export function formatPopGenSymbols(text: string): string {
   if (!text) return '';

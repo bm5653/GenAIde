@@ -11,7 +11,6 @@ import { HomeView } from './components/HomeView';
 import { LearnView } from './components/LearnView';
 import { PopGenToolboxView } from './components/PopGenToolboxView';
 import { PracticeView } from './components/PracticeView';
-import { PastYearView } from './components/PastYearView';
 import { PitfallsView } from './components/PitfallsView';
 import { ExitTicketView } from './components/ExitTicketView';
 import { NotesView } from './components/NotesView';
@@ -53,10 +52,20 @@ export default function App() {
   const handleUpdateProgress = (questionId: string, marksEarned: number, isComplete: boolean) => {
     setUserProgress(prev => {
       const isAlreadyCompleted = prev.completedQuestions.includes(questionId);
-      const newCompleted = isAlreadyCompleted 
-        ? prev.completedQuestions 
-        : [...prev.completedQuestions, questionId];
-      const newScore = isAlreadyCompleted ? prev.totalScore : prev.totalScore + marksEarned;
+      
+      let newCompleted: string[];
+      let newScore = prev.totalScore;
+
+      if (isComplete) {
+        newCompleted = isAlreadyCompleted ? prev.completedQuestions : [...prev.completedQuestions, questionId];
+        newScore = isAlreadyCompleted ? prev.totalScore : prev.totalScore + marksEarned;
+      } else {
+        newCompleted = prev.completedQuestions.filter(id => id !== questionId);
+        if (isAlreadyCompleted) {
+          newScore = Math.max(0, prev.totalScore - marksEarned);
+        }
+      }
+
       const curAttempts = (prev.attemptsByQuestion[questionId] || 0) + 1;
 
       return {
@@ -71,15 +80,29 @@ export default function App() {
     });
   };
 
+  useEffect(() => {
+    const handleProgressUpdated = (e: any) => {
+      const qId = e.detail?.qId;
+      if (qId) {
+        setUserProgress(prev => ({
+          ...prev,
+          completedQuestions: prev.completedQuestions.filter(id => id !== qId)
+        }));
+      }
+    };
+    window.addEventListener('genaide_question_progress_updated', handleProgressUpdated);
+    return () => window.removeEventListener('genaide_question_progress_updated', handleProgressUpdated);
+  }, []);
+
   const handleResetProgress = () => {
-    if (window.confirm("Are you sure you want to reset all your completed questions and score?")) {
-      setUserProgress({
-        completedQuestions: [],
-        totalScore: 0,
-        attemptsByQuestion: {},
-        masteredPitfalls: []
-      });
-    }
+    setUserProgress({
+      completedQuestions: [],
+      totalScore: 0,
+      attemptsByQuestion: {},
+      masteredPitfalls: []
+    });
+    localStorage.removeItem('genaide_question_progress_v1');
+    window.dispatchEvent(new CustomEvent('genaide_question_progress_updated', { detail: {} }));
   };
 
   const handleNavigateToQuestion = (questionId: string) => {
@@ -122,15 +145,6 @@ export default function App() {
           {activeTab === 'practice' && (
             <PracticeView
               initialQuestionId={solverTargetQuestionId}
-              userProgress={userProgress}
-              onUpdateProgress={handleUpdateProgress}
-            />
-          )}
-
-          {activeTab === 'past-year' && (
-            <PracticeView
-              initialQuestionId={solverTargetQuestionId}
-              initialMode="bank"
               userProgress={userProgress}
               onUpdateProgress={handleUpdateProgress}
             />

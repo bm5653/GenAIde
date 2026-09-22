@@ -3,6 +3,7 @@ import { ALL_QUESTIONS } from '../data/questionsData';
 import { ADDITIONAL_QUESTIONS } from '../data/pastYearAdditionalQuestions';
 import { QuestionData, StepItem } from '../types';
 import { getSavedQuestionState, saveQuestionState, clearQuestionState } from '../utils/questionProgress';
+import { getStandardFullDescription } from '../utils/symbolFormatter';
 import confetti from 'canvas-confetti';
 import { 
   GraduationCap, 
@@ -17,7 +18,11 @@ import {
   CheckCircle2,
   PenTool,
   Lightbulb,
-  ExternalLink
+  ExternalLink,
+  Edit3,
+  Sparkles,
+  Calculator,
+  RotateCcw
 } from 'lucide-react';
 
 interface PastYearViewProps {
@@ -49,20 +54,30 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
     showHint?: boolean;
   }>>({});
 
+  const [removedQuestionIds, setRemovedQuestionIds] = useState<Set<string>>(new Set());
+
   // Compute set of solved question IDs from props + local state + persisted storage fallback
   const solvedQuestionIds = useMemo(() => {
-    const set = new Set<string>([...completedQuestions, ...localCompleted]);
+    const set = new Set<string>();
+    completedQuestions.forEach(id => {
+      if (!removedQuestionIds.has(id)) set.add(id);
+    });
+    localCompleted.forEach(id => {
+      if (!removedQuestionIds.has(id)) set.add(id);
+    });
     try {
       const saved = localStorage.getItem('genaide_user_progress_v1');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed.completedQuestions)) {
-          parsed.completedQuestions.forEach((id: string) => set.add(id));
+          parsed.completedQuestions.forEach((id: string) => {
+            if (!removedQuestionIds.has(id)) set.add(id);
+          });
         }
       }
     } catch {}
     return set;
-  }, [completedQuestions, localCompleted]);
+  }, [completedQuestions, localCompleted, removedQuestionIds]);
 
   const solvedCount = allQuestions.filter(q => solvedQuestionIds.has(q.id)).length;
 
@@ -77,11 +92,16 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
   useEffect(() => {
     const handleProgressUpdate = (e: any) => {
       const qId = e.detail?.qId;
-      if (qId && activeInlineSolverId === qId) {
-        const saved = getSavedQuestionState(qId);
-        setInlineInputs(saved.userInputs);
-        setInlineFeedback(saved.stepFeedback as any);
-        setInlineStepIndex(saved.currentStepIndex);
+      if (qId) {
+        setRemovedQuestionIds(prev => new Set([...prev, qId]));
+        if (activeInlineSolverId === qId) {
+          const saved = getSavedQuestionState(qId);
+          setInlineInputs(saved.userInputs || {});
+          setInlineFeedback((saved.stepFeedback as any) || {});
+          setInlineStepIndex(saved.currentStepIndex || 0);
+        }
+      } else {
+        setRemovedQuestionIds(new Set());
       }
     };
     window.addEventListener('genaide_question_progress_updated', handleProgressUpdate);
@@ -100,6 +120,15 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
     setInlineStepIndex(saved.currentStepIndex || 0);
   };
 
+  const handleResetPastYearQuestion = (qId: string) => {
+    clearQuestionState(qId);
+    setInlineInputs({});
+    setInlineFeedback({});
+    setInlineStepIndex(0);
+    setLocalCompleted(prev => prev.filter(id => id !== qId));
+    window.dispatchEvent(new CustomEvent('genaide_question_progress_updated', { detail: { qId } }));
+  };
+
   const handleInlineInputChange = (qId: string, stepNum: number, value: string) => {
     setInlineInputs(prev => {
       const next = { ...prev, [stepNum]: value };
@@ -116,7 +145,8 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
   const handleInsertSymbol = (qId: string, stepNum: number, symbol: string) => {
     setInlineInputs(prev => {
       const current = prev[stepNum] || '';
-      const updated = current + (current.endsWith(' ') || current === '' ? '' : ' ') + symbol;
+      const noSpaceNeeded = current === '' || current.endsWith(' ') || symbol === '²' || symbol === '%';
+      const updated = current + (noSpaceNeeded ? '' : ' ') + symbol;
       const next = { ...prev, [stepNum]: updated };
       saveQuestionState(qId, {
         userInputs: next,
@@ -128,54 +158,81 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
     });
   };
 
-  const handleCheckInlineStep = (q: QuestionData, step: StepItem) => {
-    const rawInput = (inlineInputs[step.stepNumber] || '').trim();
-    if (!rawInput) return;
+  const handleInsertFullDescription = (qId: string, stepNum: number, prefix: string) => {
+    setInlineInputs(prev => {
+      const currentVal = prev[stepNum] || '';
+      if (currentVal.startsWith(prefix)) return prev;
+      const cleanVal = currentVal.replace(/^[^0-9.]*/, '').trim();
+      const newVal = `${prefix}${cleanVal}`;
+      const next = { ...prev, [stepNum]: newVal };
+      saveQuestionState(qId, {
+        userInputs: next,
+        stepFeedback: inlineFeedback,
+        currentStepIndex: inlineStepIndex,
+        isQuestionFinished: solvedQuestionIds.has(qId)
+      });
+      return next;
+    });
+  };
 
-    const isNumericStep = step.acceptedAnswers.some(ans => /\d/.test(ans));
+  const handleCheckInlineStep = (q: QuestionData, step: StepItem, overrideInput?: string) => {
+    const rawInput = (overrideInput !== undefined ? overrideInput : (inlineInputs[step.stepNumber] || '')).trim();
+    if (!rawInput && !step.isMultipleChoice) return;
 
-    // Check bare answer warning
-    if (isNumericStep) {
-      const isBare = /^[+-]?(?:\d*\.)?\d+%?$/.test(rawInput);
-      if (isBare) {
-        const newFb = {
-          ...inlineFeedback,
-          [step.stepNumber]: {
-            isCorrect: false,
-            isBareWarning: true,
-            feedbackText: "⚠️ Include your working formula & substitution before the final value! e.g. q² = 4/5000 = 0.0008"
-          }
-        };
-        setInlineFeedback(newFb);
-        saveQuestionState(q.id, {
-          userInputs: inlineInputs,
-          stepFeedback: newFb,
-          currentStepIndex: inlineStepIndex,
-          isQuestionFinished: solvedQuestionIds.has(q.id)
-        });
-        return;
-      }
-    }
-
-    // Check correctness
     let isCorrect = false;
-    const lowerInput = rawInput.toLowerCase();
 
-    for (const ans of step.acceptedAnswers) {
-      const lowerAns = ans.toLowerCase();
-      if (lowerInput.includes(lowerAns)) {
+    // Check Multiple Choice
+    if (step.isMultipleChoice && step.choiceOptions) {
+      const selectedOption = step.choiceOptions.find(o => o.value.toLowerCase() === rawInput.toLowerCase() || o.label.toLowerCase() === rawInput.toLowerCase());
+      const isAcceptedText = step.acceptedAnswers.some(ans => rawInput.toLowerCase().includes(ans.toLowerCase()) || ans.toLowerCase().includes(rawInput.toLowerCase()));
+      if (selectedOption?.isCorrect || isAcceptedText) {
         isCorrect = true;
-        break;
       }
-      const numAns = parseFloat(ans);
-      if (!isNaN(numAns)) {
-        const matchNums = rawInput.match(/[+-]?(?:\d*\.)?\d+/g);
-        if (matchNums) {
-          for (const m of matchNums) {
-            const val = parseFloat(m);
-            if (!isNaN(val) && Math.abs(val - numAns) <= (step.tolerance || 0.0001)) {
-              isCorrect = true;
-              break;
+    } else {
+      const isNumericStep = step.acceptedAnswers.some(ans => /\d/.test(ans));
+
+      // Check bare answer warning
+      if (isNumericStep) {
+        const isBare = /^[+-]?(?:\d*\.)?\d+%?$/.test(rawInput);
+        if (isBare) {
+          const newFb = {
+            ...inlineFeedback,
+            [step.stepNumber]: {
+              isCorrect: false,
+              isBareWarning: true,
+              feedbackText: "⚠️ Include your working formula & substitution before the final value! e.g. q² = 4/5000 = 0.0008"
+            }
+          };
+          setInlineFeedback(newFb);
+          saveQuestionState(q.id, {
+            userInputs: inlineInputs,
+            stepFeedback: newFb,
+            currentStepIndex: inlineStepIndex,
+            isQuestionFinished: solvedQuestionIds.has(q.id)
+          });
+          return;
+        }
+      }
+
+      // Check correctness
+      const lowerInput = rawInput.toLowerCase();
+
+      for (const ans of step.acceptedAnswers) {
+        const lowerAns = ans.toLowerCase();
+        if (lowerInput.includes(lowerAns)) {
+          isCorrect = true;
+          break;
+        }
+        const numAns = parseFloat(ans);
+        if (!isNaN(numAns)) {
+          const matchNums = rawInput.match(/[+-]?(?:\d*\.)?\d+/g);
+          if (matchNums) {
+            for (const m of matchNums) {
+              // Strict exact string comparison or matching every digit
+              if (m === ans || (Math.abs(parseFloat(m) - numAns) < 0.000001 && m.length >= ans.length)) {
+                isCorrect = true;
+                break;
+              }
             }
           }
         }
@@ -187,7 +244,7 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
         ...inlineFeedback,
         [step.stepNumber]: {
           isCorrect: true,
-          feedbackText: `✓ Correct! [${step.marks || 1} ${step.marks === 1 ? 'mark' : 'marks'}]`
+          feedbackText: `✓ Correct. Well done! [${step.marks || 1} ${step.marks === 1 ? 'mark' : 'marks'}]`
         }
       };
       setInlineFeedback(newFb);
@@ -196,7 +253,7 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
       if (inlineStepIndex === q.steps.length - 1) {
         setLocalCompleted(prev => Array.from(new Set([...prev, q.id])));
         saveQuestionState(q.id, {
-          userInputs: inlineInputs,
+          userInputs: { ...inlineInputs, [step.stepNumber]: rawInput },
           stepFeedback: newFb,
           currentStepIndex: inlineStepIndex,
           isQuestionFinished: true
@@ -209,7 +266,7 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
         const nextIdx = inlineStepIndex + 1;
         setInlineStepIndex(nextIdx);
         saveQuestionState(q.id, {
-          userInputs: inlineInputs,
+          userInputs: { ...inlineInputs, [step.stepNumber]: rawInput },
           stepFeedback: newFb,
           currentStepIndex: nextIdx,
           isQuestionFinished: false
@@ -220,12 +277,12 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
         ...inlineFeedback,
         [step.stepNumber]: {
           isCorrect: false,
-          feedbackText: `✗ Re-check your calculation for ${step.expectedConcept}.`
+          feedbackText: `❌ Incorrect. Check your answers/steps.`
         }
       };
       setInlineFeedback(newFb);
       saveQuestionState(q.id, {
-        userInputs: inlineInputs,
+        userInputs: { ...inlineInputs, [step.stepNumber]: rawInput },
         stepFeedback: newFb,
         currentStepIndex: inlineStepIndex,
         isQuestionFinished: solvedQuestionIds.has(q.id)
@@ -371,6 +428,15 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
                       <span className="hidden sm:inline">Workstation</span>
                     </button>
                   )}
+                  <button
+                    onClick={() => handleResetPastYearQuestion(q.id)}
+                    className="px-2.5 py-1.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold text-xs border border-purple-200 flex items-center gap-1 transition-all cursor-pointer"
+                    title="Reset all answer boxes and start over"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-purple-600" />
+                    <span className="hidden sm:inline">Reset &amp; Try Again</span>
+                    <span className="sm:hidden">Reset</span>
+                  </button>
                 </div>
               </div>
 
@@ -397,15 +463,27 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
                         Interactive Step Solver for {q.number}
                       </span>
                     </div>
-                    <span className="text-xs font-bold text-purple-700">
-                      Step {inlineStepIndex + 1} of {q.steps.length}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-purple-700">
+                        Step {inlineStepIndex + 1} of {q.steps.length}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleResetPastYearQuestion(q.id)}
+                        className="px-2.5 py-1 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                        title="Reset all answer boxes and start over"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-purple-600" />
+                        <span>Reset &amp; Try Again</span>
+                      </button>
+                    </div>
                   </div>
 
                   {q.steps.map((step, idx) => {
                     const isCurrentStep = idx === inlineStepIndex;
                     const isPastStep = idx < inlineStepIndex;
                     const feedback = inlineFeedback[step.stepNumber];
+                    const standardDesc = getStandardFullDescription(step, q.questionText);
 
                     if (!isCurrentStep && !isPastStep) return null;
 
@@ -432,41 +510,113 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
 
                         {isCurrentStep ? (
                           <div className="space-y-3">
-                            {/* Symbol shortcut bar */}
-                            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                              <span className="text-[10px] font-bold text-purple-700">Insert Symbol:</span>
-                              {['q²', 'q', 'p', '2pq', 'p²', '√', '÷', '×', '1 - q'].map(sym => (
-                                <button
-                                  key={sym}
-                                  type="button"
-                                  onClick={() => handleInsertSymbol(q.id, step.stepNumber, sym)}
-                                  className="px-2 py-1 bg-purple-100 hover:bg-purple-200 text-purple-950 font-mono font-bold text-xs rounded border border-purple-300 active:scale-95 transition-transform cursor-pointer"
-                                >
-                                  {sym}
-                                </button>
-                              ))}
-                            </div>
+                            {step.isMultipleChoice && step.choiceOptions ? (
+                              <div className="space-y-3 pt-1">
+                                <div className="space-y-2">
+                                  {step.choiceOptions.map((opt, cIdx) => {
+                                    const isChosen = (inlineInputs[step.stepNumber] || '') === opt.value;
+                                    return (
+                                      <button
+                                        key={cIdx}
+                                        type="button"
+                                        onClick={() => {
+                                          handleInlineInputChange(q.id, step.stepNumber, opt.value);
+                                          handleCheckInlineStep(q, step, opt.value);
+                                        }}
+                                        className={`w-full p-3 rounded-xl border text-left text-xs transition-all flex items-start gap-2.5 cursor-pointer ${
+                                          isChosen
+                                            ? 'bg-purple-800 text-white font-bold border-purple-900 shadow-xs'
+                                            : 'bg-white hover:bg-purple-50 text-purple-950 border-purple-200'
+                                        }`}
+                                      >
+                                        <div className={`w-3.5 h-3.5 rounded-full mt-0.5 border flex items-center justify-center shrink-0 ${
+                                          isChosen ? 'border-white bg-white text-purple-900' : 'border-purple-300'
+                                        }`}>
+                                          {isChosen && <div className="w-1.5 h-1.5 rounded-full bg-purple-900" />}
+                                        </div>
+                                        <span className="leading-snug">{opt.label}</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                                <div className="flex justify-end">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCheckInlineStep(q, step)}
+                                    className="px-4 py-2 bg-purple-800 hover:bg-purple-900 text-white font-bold text-xs rounded-xl shadow-xs shrink-0 cursor-pointer active:scale-95"
+                                  >
+                                    Check Step
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                {/* Quick-Insert Template & Math Symbols Toolbar */}
+                                <div className="space-y-2 pt-1">
+                                  {standardDesc.fullPrefix && (
+                                    <div className="p-3 rounded-xl bg-purple-50 border border-purple-200 space-y-2">
+                                      <div className="flex flex-wrap items-center justify-between gap-1.5">
+                                        <span className="text-xs font-extrabold text-purple-950 flex items-center gap-1.5">
+                                          <Edit3 className="w-3.5 h-3.5 text-purple-700" />
+                                          <span>Matriculation Requirement: Full Symbol Description Required</span>
+                                        </span>
+                                        <span className="text-[11px] text-rose-700 font-bold">
+                                          (No bare answers or bare symbols)
+                                        </span>
+                                      </div>
 
-                            {/* Step Input */}
-                            <div className="flex flex-col sm:flex-row gap-2">
-                              <input
-                                type="text"
-                                value={inlineInputs[step.stepNumber] || ''}
-                                onChange={(e) => handleInlineInputChange(q.id, step.stepNumber, e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') handleCheckInlineStep(q, step);
-                                }}
-                                placeholder={`Enter working & value (e.g. ${step.expectedSymbol || 'q'} = ... = ...)`}
-                                className="flex-1 px-3 py-2 text-xs sm:text-sm font-mono border border-purple-300 rounded-xl focus:ring-2 focus:ring-purple-600 focus:outline-hidden bg-white"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleCheckInlineStep(q, step)}
-                                className="px-4 py-2 bg-purple-800 hover:bg-purple-900 text-white font-bold text-xs rounded-xl shadow-xs shrink-0 cursor-pointer active:scale-95"
-                              >
-                                Check Step
-                              </button>
-                            </div>
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-xs text-purple-800">Quick-Insert Template:</span>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleInsertFullDescription(q.id, step.stepNumber, standardDesc.fullPrefix)}
+                                          className="px-3 py-1.5 rounded-lg bg-white hover:bg-purple-100 text-purple-900 font-bold font-mono text-xs border border-purple-300 shadow-2xs transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                                        >
+                                          <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                                          <span>+ {standardDesc.fullPrefix}</span>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    <span className="text-[11px] font-bold text-purple-800 flex items-center gap-1">
+                                      <Calculator className="w-3.5 h-3.5 text-purple-600" /> Math Symbols:
+                                    </span>
+                                    {['√', '²', 'p²', 'q²', '2pq', 'p', 'q', '+', '-', '1 - q', '100', '%'].map(sym => (
+                                      <button
+                                        key={sym}
+                                        type="button"
+                                        onClick={() => handleInsertSymbol(q.id, step.stepNumber, sym)}
+                                        className="px-2.5 py-1 bg-purple-100 hover:bg-purple-200 text-purple-950 font-mono text-xs font-bold rounded-lg border border-purple-200 active:scale-95 cursor-pointer transition-colors"
+                                      >
+                                        {sym}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                  <input
+                                    type="text"
+                                    value={inlineInputs[step.stepNumber] || ''}
+                                    onChange={(e) => handleInlineInputChange(q.id, step.stepNumber, e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') handleCheckInlineStep(q, step);
+                                    }}
+                                    placeholder={step.expectedSymbol ? `e.g. ${step.expectedSymbol} = ...` : "Enter step with description and value..."}
+                                    className="flex-1 px-3 py-2 text-xs sm:text-sm font-mono border border-purple-300 rounded-xl focus:ring-2 focus:ring-purple-600 focus:outline-hidden bg-white shadow-2xs"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCheckInlineStep(q, step)}
+                                    className="px-4 py-2 bg-purple-800 hover:bg-purple-900 text-white font-bold text-xs rounded-xl shadow-xs shrink-0 cursor-pointer active:scale-95"
+                                  >
+                                    Check Step
+                                  </button>
+                                </div>
+                              </>
+                            )}
 
                             {/* Step Feedback Banner */}
                             {feedback && (
@@ -495,9 +645,11 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
                             </div>
                           </div>
                         ) : (
-                          <div className="p-2.5 rounded-lg bg-emerald-100/60 text-emerald-900 font-mono text-xs flex items-center justify-between">
-                            <span>✓ Completed: {inlineInputs[step.stepNumber] || step.explanation}</span>
-                            <span className="font-bold text-emerald-800">+{step.marks} marks</span>
+                          <div className="p-2.5 rounded-lg bg-emerald-100/60 text-emerald-900 font-mono text-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                            <span>
+                              ✓ Completed: {inlineInputs[step.stepNumber] || step.explanation}
+                            </span>
+                            <span className="font-bold text-emerald-800 shrink-0">+{step.marks} marks</span>
                           </div>
                         )}
                       </div>
@@ -509,18 +661,29 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
               {/* Official Mark Scheme Toggle Section */}
               <div className="pt-1 space-y-2">
                 {isSolved ? (
-                  <>
-                    <button
-                      onClick={() => toggleMarkScheme(q.id)}
-                      className="w-full py-2.5 px-3.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-950 border-2 border-emerald-300 font-bold text-xs flex items-center justify-between transition-colors shadow-2xs cursor-pointer"
-                    >
-                      <span className="flex items-center gap-2">
-                        <FileCheck className="w-4 h-4 text-emerald-700" />
-                        <span className="font-black text-emerald-900">✓ UNLOCKED</span>
-                        <span>— {isExpanded ? 'Hide Official Mark Scheme & Allocation' : 'View Official Mark Scheme & Allocation'}</span>
-                      </span>
-                      {isExpanded ? <ChevronUp className="w-4 h-4 text-emerald-800" /> : <ChevronDown className="w-4 h-4 text-emerald-800" />}
-                    </button>
+                  <div className="space-y-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <button
+                        onClick={() => toggleMarkScheme(q.id)}
+                        className="flex-1 py-2.5 px-3.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-950 border-2 border-emerald-300 font-bold text-xs flex items-center justify-between transition-colors shadow-2xs cursor-pointer"
+                      >
+                        <span className="flex items-center gap-2">
+                          <FileCheck className="w-4 h-4 text-emerald-700" />
+                          <span className="font-black text-emerald-900">✓ UNLOCKED</span>
+                          <span>— {isExpanded ? 'Hide Official Mark Scheme & Allocation' : 'View Official Mark Scheme & Allocation'}</span>
+                        </span>
+                        {isExpanded ? <ChevronUp className="w-4 h-4 text-emerald-800" /> : <ChevronDown className="w-4 h-4 text-emerald-800" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleResetPastYearQuestion(q.id)}
+                        className="px-3 py-2.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-950 border border-purple-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-2xs cursor-pointer shrink-0"
+                        title="Reset question to try again from scratch"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-purple-700" />
+                        <span>Reset &amp; Try Again</span>
+                      </button>
+                    </div>
 
                     {/* Collapsible Mark Scheme */}
                     {isExpanded && (
@@ -539,7 +702,7 @@ export const PastYearView: React.FC<PastYearViewProps> = ({
                         ))}
                       </div>
                     )}
-                  </>
+                  </div>
                 ) : (
                   <div className="p-3 bg-purple-50/80 border border-purple-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                     <div className="flex items-center gap-2 text-xs font-semibold text-purple-950">

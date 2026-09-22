@@ -69,16 +69,8 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               id="home-btn-practise-questions"
               className="px-5 py-2.5 rounded-xl bg-white hover:bg-purple-50 text-purple-950 font-bold text-sm shadow-md transition-all flex items-center gap-2 active:scale-95 cursor-pointer"
             >
-              <PenTool className="w-4 h-4 text-purple-700" />
-              STEP SOLVER &amp; QUESTION BANK
-            </button>
-            <button
-              onClick={() => onNavigate('practice')}
-              id="home-btn-past-year"
-              className="px-5 py-2.5 rounded-xl bg-purple-900/90 hover:bg-purple-800 text-purple-100 font-semibold text-sm border border-purple-600 transition-all flex items-center gap-2 active:scale-95 cursor-pointer"
-            >
-              <GraduationCap className="w-4 h-4 text-purple-300" />
-              TUTORIAL &amp; PSPM QUESTION BANK
+              <GraduationCap className="w-4 h-4 text-purple-700" />
+              TUTORIAL &amp; PSPM BANK
             </button>
             <button
               onClick={() => onNavigate('exit-ticket')}
@@ -160,7 +152,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
             </p>
           </div>
           <div className="text-xs font-semibold text-purple-600 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-            <span>Open Step-by-Step Solver</span>
+            <span>Solve in Question Bank</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </div>
         </div>
@@ -175,7 +167,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               <CheckCircle2 className="w-6 h-6" />
             </div>
             <h3 className="text-lg font-bold text-purple-950 group-hover:text-purple-800 transition-colors">
-              3. CHECK & DIAGNOSE
+              3. CHECK &amp; DIAGNOSE
             </h3>
             <p className="text-sm text-purple-900/80 leading-relaxed">
               Find <em>exactly</em> where your calculation went wrong. Instant error diagnostics identify if you forgot <span className="font-mono text-purple-800">√</span>, missed the factor of 2 in <span className="font-mono text-purple-800">2pq</span>, or rounded too early.
@@ -205,9 +197,9 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
 
         <button
           onClick={() => onNavigate('practice')}
-          className="px-5 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-sm shadow-sm transition-all whitespace-nowrap active:scale-95 flex items-center gap-2"
+          className="px-5 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-sm shadow-sm transition-all whitespace-nowrap active:scale-95 flex items-center gap-2 cursor-pointer"
         >
-          <span>Open Step Solver</span>
+          <span>Practise in Question Bank</span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </section>

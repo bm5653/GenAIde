@@ -99,12 +99,12 @@ export const PITFALLS_DATA: PitfallItem[] = [
     howToSpotIt: "Check if the question specifies 'What is the percentage...' or 'What is the frequency...'.",
     howToAvoidIt: "For frequency, keep as decimal (e.g. 0.42). For percentage, multiply by 100 and write '%' (e.g. 42%).",
     badExample: "Question: 'What is the percentage of carriers?' Student answers: 0.42 ❌",
-    goodExample: "Percentage of carriers = 2pq × 100% = 0.42 × 100% = 42%. ✓",
+    goodExample: "Percentage of carriers = 2pq × 100 = 0.42 × 100 = 42%. ✓",
     miniQuiz: {
       question: "The question asks: 'What is the percentage of carriers?' If 2pq = 0.0340, what is the answer?",
       options: [
         { text: "0.0340", isCorrect: false, feedback: "This is the frequency, not the percentage." },
-        { text: "3.4%", isCorrect: true, feedback: "Correct! 0.0340 × 100% = 3.4%." },
+        { text: "3.4%", isCorrect: true, feedback: "Correct! 0.0340 × 100 = 3.4%." },
         { text: "34%", isCorrect: false, feedback: "0.0340 × 100 = 3.4, not 34." }
       ]
     }

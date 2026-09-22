@@ -1414,7 +1414,7 @@ export const NotesView: React.FC = () => {
                 <span className="text-[11px] font-extrabold text-purple-900 mr-1 flex items-center gap-1">
                   <span>Formula Stamps:</span>
                 </span>
-                {['p²', '2pq', 'q²', 'p', 'q', '√', '1-q', '→', 'AA', 'Aa', 'aa'].map((sym) => (
+                {['p²', '2pq', 'q²', 'p', 'q', '²', '√', '1-q', '→', 'AA', 'Aa', 'aa'].map((sym) => (
                   <button
                     key={sym}
                     onClick={() => handleInsertSymbol(sym)}

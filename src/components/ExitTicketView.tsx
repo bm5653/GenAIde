@@ -49,7 +49,7 @@ const EXIT_QUESTIONS: ExitQuestion[] = [
     options: [
       { text: "Because dimples is controlled by 3 alleles.", isCorrect: false, explanation: "No, dimples is a single-gene Mendelian trait." },
       { text: "Because students with dimples consist of BOTH homozygous dominant (p²) AND heterozygous (2pq) genotypes.", isCorrect: true, explanation: "Exact! The 200 dimpled students are p² + 2pq. Non-dimpled students (1000) are homozygous recessive q²." },
-      { text: "Because you forgot to multiply by 100%.", isCorrect: false, explanation: "The error is biological/genotypic, not percentage conversion." },
+      { text: "Because you forgot to multiply by 100.", isCorrect: false, explanation: "The error is biological/genotypic, not percentage conversion." },
       { text: "Because p² is always 1.", isCorrect: false, explanation: "p² is not always 1." }
     ]
   },

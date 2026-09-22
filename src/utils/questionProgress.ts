@@ -6,6 +6,7 @@ export interface SavedStepFeedback {
   attempts?: number;
   activeHintLevel?: number;
   showIncorrectBanner?: boolean;
+  isAttemptSubmitted?: boolean;
 }
 
 export interface SavedQuestionState {
@@ -13,6 +14,7 @@ export interface SavedQuestionState {
   stepFeedback: Record<number, SavedStepFeedback>;
   currentStepIndex: number;
   isQuestionFinished: boolean;
+  attemptCompleted?: boolean;
   detectorAnswered?: boolean;
   detectorSelectedIdx?: number | null;
   lastUpdated?: number;
@@ -31,6 +33,7 @@ export const getSavedQuestionState = (qId: string): SavedQuestionState => {
           stepFeedback: parsed[qId].stepFeedback || {},
           currentStepIndex: typeof parsed[qId].currentStepIndex === 'number' ? parsed[qId].currentStepIndex : 0,
           isQuestionFinished: !!parsed[qId].isQuestionFinished,
+          attemptCompleted: !!(parsed[qId].attemptCompleted ?? parsed[qId].isQuestionFinished),
           detectorAnswered: !!parsed[qId].detectorAnswered,
           detectorSelectedIdx: parsed[qId].detectorSelectedIdx ?? null,
           lastUpdated: parsed[qId].lastUpdated
@@ -46,6 +49,7 @@ export const getSavedQuestionState = (qId: string): SavedQuestionState => {
     stepFeedback: {},
     currentStepIndex: 0,
     isQuestionFinished: false,
+    attemptCompleted: false,
     detectorAnswered: false,
     detectorSelectedIdx: null
   };
@@ -60,6 +64,7 @@ export const saveQuestionState = (qId: string, data: Partial<SavedQuestionState>
       stepFeedback: {},
       currentStepIndex: 0,
       isQuestionFinished: false,
+      attemptCompleted: false,
       detectorAnswered: false,
       detectorSelectedIdx: null
     };
@@ -101,8 +106,20 @@ export const clearQuestionState = (qId: string): void => {
       const store = JSON.parse(raw);
       delete store[qId];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-      window.dispatchEvent(new CustomEvent('genaide_question_progress_updated', { detail: { qId } }));
     }
+
+    try {
+      const savedProgress = localStorage.getItem('genaide_user_progress_v1');
+      if (savedProgress) {
+        let parsed = JSON.parse(savedProgress);
+        if (Array.isArray(parsed.completedQuestions)) {
+          parsed.completedQuestions = parsed.completedQuestions.filter((id: string) => id !== qId);
+          localStorage.setItem('genaide_user_progress_v1', JSON.stringify(parsed));
+        }
+      }
+    } catch {}
+
+    window.dispatchEvent(new CustomEvent('genaide_question_progress_updated', { detail: { qId } }));
   } catch (e) {
     console.warn('Failed to clear question state', e);
   }
