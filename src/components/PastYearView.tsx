@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { ALL_QUESTIONS } from '../data/questionsData';
 import { ADDITIONAL_QUESTIONS } from '../data/pastYearAdditionalQuestions';
 import { QuestionData, StepItem } from '../types';
-import { getSavedQuestionState, saveQuestionState } from '../utils/questionProgress';
+import { getSavedQuestionState, saveQuestionState, clearQuestionState } from '../utils/questionProgress';
 import confetti from 'canvas-confetti';
 import { 
   GraduationCap, 

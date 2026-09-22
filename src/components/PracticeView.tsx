@@ -1344,6 +1344,7 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
                                     </span>
                                   )}
                                   <button
+                                    type="button"
                                     onClick={() => checkStep(step)}
                                     className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs shadow-xs active:scale-95 whitespace-nowrap flex items-center justify-center gap-1.5 min-h-[42px] cursor-pointer"
                                   >
@@ -1351,6 +1352,7 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
                                     <span>Check Step</span>
                                   </button>
                                   <button
+                                    type="button"
                                     onClick={() => handleRequestHint(step.stepNumber)}
                                     className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 font-semibold text-xs border border-purple-300 flex items-center justify-center gap-1 min-h-[42px] cursor-pointer"
                                     title="Get progressive hint"
